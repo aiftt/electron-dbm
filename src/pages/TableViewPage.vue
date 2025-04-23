@@ -1,52 +1,55 @@
 <template>
   <div class="h-full flex flex-col overflow-hidden">
-    <!-- Table Header -->
+    <!-- 表格标题 -->
     <div class="bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 p-4">
       <div class="flex justify-between items-center">
         <div>
-          <h2 class="text-xl font-semibold">{{ database }}.{{ table }}</h2>
+          <h2 class="text-xl font-semibold">表：{{ table }}</h2>
           <p class="text-sm text-gray-500 dark:text-gray-400">
-            Connection: {{ connectionName }}
+            数据库：{{ database }}
           </p>
         </div>
         <div class="flex gap-2">
           <el-button-group>
             <el-button size="small" @click="refreshData">
-              <i class="fas fa-sync-alt mr-1"></i> Refresh
+              <Icon icon="mdi:refresh" class="mr-1" /> 刷新
             </el-button>
             <el-button size="small" @click="showInsertDialog = true">
-              <i class="fas fa-plus mr-1"></i> Insert
+              <Icon icon="mdi:plus" class="mr-1" /> 新增记录
+            </el-button>
+            <el-button size="small" @click="showStructureDialog = true">
+              <Icon icon="mdi:information-outline" class="mr-1" /> 表结构
             </el-button>
           </el-button-group>
         </div>
       </div>
     </div>
     
-    <!-- Table Tabs -->
+    <!-- 表格标签栏 -->
     <div class="bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700">
       <el-tabs v-model="activeTab">
-        <el-tab-pane label="Data" name="data"></el-tab-pane>
-        <el-tab-pane label="Structure" name="structure"></el-tab-pane>
-        <el-tab-pane label="Indexes" name="indexes"></el-tab-pane>
-        <el-tab-pane label="Foreign Keys" name="foreign-keys"></el-tab-pane>
+        <el-tab-pane label="数据" name="data"></el-tab-pane>
+        <el-tab-pane label="结构" name="structure"></el-tab-pane>
+        <el-tab-pane label="索引" name="indexes"></el-tab-pane>
+        <el-tab-pane label="外键" name="foreign-keys"></el-tab-pane>
       </el-tabs>
     </div>
     
-    <!-- Table Content -->
+    <!-- 表格内容 -->
     <div class="flex-1 overflow-auto p-4">
-      <!-- Data Tab -->
+      <!-- 数据标签页 -->
       <div v-if="activeTab === 'data'" class="h-full flex flex-col">
-        <!-- Filter and Pagination -->
+        <!-- 筛选和分页 -->
         <div class="flex justify-between items-center mb-4">
           <div class="flex gap-2 items-center">
             <el-input
               v-model="filter"
-              placeholder="Filter data..."
+              placeholder="搜索记录..."
               prefix-icon="el-icon-search"
               size="small"
               class="w-64"
             ></el-input>
-            <el-button size="small" @click="applyFilter">Apply</el-button>
+            <el-button size="small" @click="applyFilter">应用</el-button>
           </div>
           
           <el-pagination
@@ -58,7 +61,7 @@
           ></el-pagination>
         </div>
         
-        <!-- Table Data -->
+        <!-- 表格数据 -->
         <div class="flex-1 overflow-auto">
           <el-table
             :data="tableData"
@@ -67,29 +70,31 @@
             height="100%"
             @row-click="handleRowClick"
           >
-            <!-- Action column -->
-            <el-table-column fixed="left" label="Actions" width="120">
+            <!-- 操作列 -->
+            <el-table-column fixed="left" label="操作" width="120">
               <template #default="scope">
                 <el-button-group>
                   <el-button
                     size="small"
                     type="primary"
                     @click.stop="editRow(scope.row)"
-                    icon="el-icon-edit"
                     circle
-                  ></el-button>
+                  >
+                    <Icon icon="mdi:pencil" />
+                  </el-button>
                   <el-button
                     size="small"
                     type="danger"
                     @click.stop="confirmDeleteRow(scope.row)"
-                    icon="el-icon-delete"
                     circle
-                  ></el-button>
+                  >
+                    <Icon icon="mdi:delete" />
+                  </el-button>
                 </el-button-group>
               </template>
             </el-table-column>
             
-            <!-- Dynamic columns based on table structure -->
+            <!-- 根据表结构生成的动态列 -->
             <el-table-column
               v-for="column in tableColumns"
               :key="column.name"
@@ -107,36 +112,36 @@
         </div>
       </div>
       
-      <!-- Structure Tab -->
+      <!-- 结构标签页 -->
       <div v-else-if="activeTab === 'structure'">
         <el-table :data="tableColumns" border style="width: 100%">
-          <el-table-column prop="name" label="Column Name" width="200"></el-table-column>
-          <el-table-column prop="type" label="Data Type" width="200"></el-table-column>
-          <el-table-column prop="nullable" label="Nullable" width="100">
+          <el-table-column prop="name" label="列名" width="200"></el-table-column>
+          <el-table-column prop="type" label="数据类型" width="200"></el-table-column>
+          <el-table-column prop="nullable" label="允许空值" width="100">
             <template #default="scope">
-              {{ scope.row.nullable ? 'YES' : 'NO' }}
+              {{ scope.row.nullable ? '是' : '否' }}
             </template>
           </el-table-column>
-          <el-table-column prop="key" label="Key" width="100"></el-table-column>
-          <el-table-column prop="default" label="Default" width="150">
+          <el-table-column prop="key" label="键类型" width="100"></el-table-column>
+          <el-table-column prop="default" label="默认值" width="150">
             <template #default="scope">
               <span :class="{ 'text-gray-400': scope.row.default === null }">
                 {{ scope.row.default === null ? 'NULL' : scope.row.default }}
               </span>
             </template>
           </el-table-column>
-          <el-table-column prop="extra" label="Extra" width="150"></el-table-column>
+          <el-table-column prop="extra" label="额外信息" width="150"></el-table-column>
         </el-table>
       </div>
       
-      <!-- Other tabs would be implemented similarly -->
+      <!-- 其他标签页类似方式实现 -->
       <div v-else class="p-4">
-        <el-empty :description="`${activeTab.charAt(0).toUpperCase() + activeTab.slice(1)} content coming soon`"></el-empty>
+        <el-empty :description="`${activeTab.charAt(0).toUpperCase() + activeTab.slice(1)} 内容即将推出`"></el-empty>
       </div>
     </div>
     
-    <!-- Edit Row Dialog -->
-    <el-dialog v-model="showEditDialog" title="Edit Row" width="700px">
+    <!-- 编辑行对话框 -->
+    <el-dialog v-model="showEditDialog" title="编辑行" width="700px">
       <el-form :model="editForm" label-width="150px">
         <el-form-item v-for="column in tableColumns" :key="column.name" :label="column.name">
           <el-input v-model="editForm[column.name]" :disabled="column.key === 'PRI'"></el-input>
@@ -144,14 +149,14 @@
       </el-form>
       <template #footer>
         <span class="dialog-footer">
-          <el-button @click="showEditDialog = false">Cancel</el-button>
-          <el-button type="primary" @click="saveRow">Save</el-button>
+          <el-button @click="showEditDialog = false">取消</el-button>
+          <el-button type="primary" @click="saveRow">保存</el-button>
         </span>
       </template>
     </el-dialog>
     
-    <!-- Insert Row Dialog -->
-    <el-dialog v-model="showInsertDialog" title="Insert Row" width="700px">
+    <!-- 插入行对话框 -->
+    <el-dialog v-model="showInsertDialog" title="插入行" width="700px">
       <el-form :model="insertForm" label-width="150px">
         <el-form-item v-for="column in tableColumns" :key="column.name" :label="column.name">
           <el-input 
@@ -163,24 +168,24 @@
       </el-form>
       <template #footer>
         <span class="dialog-footer">
-          <el-button @click="showInsertDialog = false">Cancel</el-button>
-          <el-button type="primary" @click="insertRow">Insert</el-button>
+          <el-button @click="showInsertDialog = false">取消</el-button>
+          <el-button type="primary" @click="insertRow">插入</el-button>
         </span>
       </template>
     </el-dialog>
     
-    <!-- Delete Confirmation Dialog -->
+    <!-- 删除确认对话框 -->
     <el-dialog
       v-model="showDeleteConfirmation"
-      title="Delete Row"
+      title="删除行"
       width="400px"
     >
-      <p>Are you sure you want to delete this row?</p>
-      <p class="text-gray-500 text-sm mt-2">This action cannot be undone.</p>
+      <p>确定要删除这一行吗？</p>
+      <p class="text-gray-500 text-sm mt-2">此操作不可撤销。</p>
       <template #footer>
         <span class="dialog-footer">
-          <el-button @click="showDeleteConfirmation = false">Cancel</el-button>
-          <el-button type="danger" @click="deleteRow">Delete</el-button>
+          <el-button @click="showDeleteConfirmation = false">取消</el-button>
+          <el-button type="danger" @click="deleteRow">删除</el-button>
         </span>
       </template>
     </el-dialog>
@@ -190,19 +195,20 @@
 <script setup lang="ts">
 import { ref, onMounted, computed, reactive } from 'vue';
 import { useRoute } from 'vue-router';
+import { Icon } from '@iconify/vue';
 
 const route = useRoute();
 const connectionId = computed(() => Number(route.params.connectionId));
 const database = computed(() => route.params.database as string);
 const table = computed(() => route.params.table as string);
 
-// Connection info (would be fetched from a store in a real app)
-const connectionName = ref('Local MySQL');
+// 连接信息（在实际应用中会从 store 中获取）
+const connectionName = ref('本地 MySQL');
 
-// Tab state
+// 标签页状态
 const activeTab = ref('data');
 
-// Table data state
+// 表格数据状态
 const tableData = ref([]);
 const tableColumns = ref([]);
 const totalRows = ref(100);
@@ -210,7 +216,7 @@ const pageSize = ref(25);
 const currentPage = ref(1);
 const filter = ref('');
 
-// Dialogs
+// 对话框
 const showEditDialog = ref(false);
 const showInsertDialog = ref(false);
 const showDeleteConfirmation = ref(false);
@@ -219,13 +225,13 @@ const insertForm = reactive({});
 const selectedRow = ref(null);
 
 function refreshData() {
-  // In a real app, this would fetch data from the server
-  // For demo purposes, we'll generate mock data
+  // 在实际应用中，这会从服务器获取数据
+  // 为了演示，我们将生成模拟数据
   loadMockData();
 }
 
 function loadMockData() {
-  // Generate mock columns
+  // 生成模拟列
   tableColumns.value = [
     { name: 'id', type: 'int(11)', nullable: false, key: 'PRI', default: null, extra: 'auto_increment' },
     { name: 'username', type: 'varchar(50)', nullable: false, key: 'UNI', default: null, extra: '' },
@@ -236,14 +242,14 @@ function loadMockData() {
     { name: 'updated_at', type: 'datetime', nullable: true, key: '', default: null, extra: '' },
   ];
   
-  // Generate mock data
+  // 生成模拟数据
   tableData.value = Array.from({ length: pageSize.value }, (_, i) => {
     const id = (currentPage.value - 1) * pageSize.value + i + 1;
     return {
       id: id,
       username: `user${id}`,
       email: `user${id}@example.com`,
-      full_name: `User ${id}`,
+      full_name: `用户 ${id}`,
       active: Math.random() > 0.2 ? 1 : 0,
       created_at: '2023-01-01 12:00:00',
       updated_at: Math.random() > 0.5 ? '2023-02-15 15:30:00' : null,
@@ -257,28 +263,28 @@ function handlePageChange(page: number) {
 }
 
 function applyFilter() {
-  // In a real app, this would filter data based on the filter value
-  console.log(`Filtering with: ${filter.value}`);
+  // 在实际应用中，这会基于筛选值过滤数据
+  console.log(`筛选条件: ${filter.value}`);
   currentPage.value = 1;
   refreshData();
 }
 
 function handleRowClick(row: any) {
-  console.log('Row clicked:', row);
+  console.log('行点击:', row);
 }
 
 function editRow(row: any) {
   selectedRow.value = row;
-  // Reset form and populate with row data
+  // 重置表单并填充行数据
   Object.keys(editForm).forEach(key => delete editForm[key]);
   Object.assign(editForm, row);
   showEditDialog.value = true;
 }
 
 function saveRow() {
-  // In a real app, this would save the edited row to the database
-  console.log('Saving row:', editForm);
-  // Update the row in the table
+  // 在实际应用中，这会将编辑后的行保存到数据库
+  console.log('保存行:', editForm);
+  // 更新表格中的行
   const index = tableData.value.findIndex(row => row.id === editForm.id);
   if (index !== -1) {
     tableData.value[index] = { ...editForm };
@@ -292,38 +298,38 @@ function confirmDeleteRow(row: any) {
 }
 
 function deleteRow() {
-  // In a real app, this would delete the row from the database
-  console.log('Deleting row:', selectedRow.value);
-  // Remove the row from the table
+  // 在实际应用中，这会从数据库中删除行
+  console.log('删除行:', selectedRow.value);
+  // 从表格中移除行
   tableData.value = tableData.value.filter(row => row.id !== selectedRow.value.id);
   showDeleteConfirmation.value = false;
   selectedRow.value = null;
 }
 
 function insertRow() {
-  // In a real app, this would insert a new row into the database
-  console.log('Inserting row:', insertForm);
-  // Add the row to the table
+  // 在实际应用中，这会向数据库插入新行
+  console.log('插入行:', insertForm);
+  // 将行添加到表格
   const newId = Math.max(...tableData.value.map(row => row.id)) + 1;
   tableData.value.unshift({ ...insertForm, id: newId });
   showInsertDialog.value = false;
-  // Reset the form
+  // 重置表单
   Object.keys(insertForm).forEach(key => delete insertForm[key]);
 }
 
 function formatColumnValue(value: any, type: string) {
   if (value === null) return 'NULL';
   if (type.includes('tinyint') && (value === 0 || value === 1)) {
-    return value === 1 ? 'Yes' : 'No';
+    return value === 1 ? '是' : '否';
   }
   return value;
 }
 
 onMounted(() => {
-  console.log(`Loading table ${database.value}.${table.value} from connection ${connectionId.value}`);
+  console.log(`加载表 ${database.value}.${table.value}，连接 ID ${connectionId.value}`);
   loadMockData();
   
-  // Initialize insert form with empty values
+  // 用空值初始化插入表单
   tableColumns.value.forEach(column => {
     insertForm[column.name] = '';
   });

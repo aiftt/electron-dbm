@@ -1,95 +1,201 @@
-# Electron Database Manager (DBM) - Project Plan
+# Electron 数据库管理器 (DBM) - 项目计划
 
-## Project Overview
+## 项目概述
 
-A Navicat-like database management client built with Electron, Vue 3, Tailwind CSS, and Element Plus. This application will allow users to connect to and manage various database systems through a modern, user-friendly interface.
+一个类似 Navicat 的数据库管理客户端，基于 Electron、Vue 3、Tailwind CSS 和 Element Plus 构建。本应用将允许用户通过现代、用户友好的界面连接和管理各种数据库系统。
 
-## Technology Stack
+## 技术栈
 
-- **Electron**: For cross-platform desktop application
-- **Vue 3**: Frontend framework with Composition API
-- **Tailwind CSS**: Utility-first CSS framework
-- **Element Plus**: UI component library
-- **TypeScript**: For type safety and better developer experience
+- **Electron**: 用于跨平台桌面应用程序开发
+- **Vue 3**: 前端框架，使用 Composition API
+- **Tailwind CSS**: 实用优先的 CSS 框架
+- **Element Plus**: UI 组件库
+- **TypeScript**: 提供类型安全和更好的开发体验
 
-## Project Structure
+## 项目结构
 
 ```
 electron-dbm/
-├── .cursor/                 # Cursor editor configuration
-├── dist/                    # Build output
-├── electron/                # Electron main process code
-├── src/                     # Vue application code
-│   ├── assets/              # Static assets
-│   ├── components/          # Reusable Vue components
-│   ├── layouts/             # Application layouts
-│   ├── pages/               # Vue pages/views
-│   ├── router/              # Vue Router configuration
-│   ├── services/            # API and service functions
-│   ├── stores/              # Pinia stores for state management
-│   ├── types/               # TypeScript type definitions
-│   ├── utils/               # Utility functions
-│   ├── App.vue              # Root Vue component
-│   └── main.ts              # Vue application entry point
-├── public/                  # Static files to be copied to build directory
-├── .gitignore               # Git ignore file
-├── index.html               # HTML entry point
-├── package.json             # Project dependencies and scripts
-├── tsconfig.json            # TypeScript configuration
-├── vite.config.ts           # Vite configuration
-└── tailwind.config.js       # Tailwind CSS configuration
+├── .cursor/                 # Cursor 编辑器配置
+├── dist/                    # 构建输出
+├── electron/                # Electron 主进程代码
+├── src/                     # Vue 应用代码
+│   ├── assets/              # 静态资源
+│   ├── components/          # 可复用 Vue 组件
+│   ├── layouts/             # 应用布局
+│   ├── pages/               # Vue 页面/视图
+│   ├── router/              # Vue Router 配置
+│   ├── services/            # API 和服务函数
+│   ├── stores/              # Pinia 状态管理
+│   ├── types/               # TypeScript 类型定义
+│   ├── utils/               # 工具函数
+│   ├── App.vue              # 根 Vue 组件
+│   └── main.ts              # Vue 应用入口点
+├── public/                  # 静态文件（会被复制到构建目录）
+├── .gitignore               # Git 忽略文件
+├── index.html               # HTML 入口点
+├── package.json             # 项目依赖和脚本
+├── tsconfig.json            # TypeScript 配置
+├── vite.config.ts           # Vite 配置
+└── tailwind.config.js       # Tailwind CSS 配置
 ```
 
-## Development Phases
+## 开发阶段
 
-### Phase 1: Project Setup
+### 第 1 阶段：项目设置（已完成）
 
-- Initialize Electron with Vue 3 using Vite
-- Configure TypeScript
-- Set up Tailwind CSS and Element Plus
-- Create basic folder structure
-- Configure build process
+- 使用 Vite 初始化 Electron 与 Vue 3
+- 配置 TypeScript
+- 设置 Tailwind CSS 和 Element Plus
+- 创建基本文件夹结构
+- 配置构建流程
 
-### Phase 2: Core Features Development
+### 第 2 阶段：核心功能开发（进行中）
 
-- Database Connection Management
-  - Connection creation, editing, and testing
-  - Support for MySQL, PostgreSQL, SQLite (initial databases)
-- UI Layout and Navigation
-  - Sidebar with connection tree
-  - Tabbed interface for multiple open connections/queries
-- Query Editor
-  - SQL editor with syntax highlighting
-  - Query execution and results display
+- 数据库连接管理
 
-### Phase 3: Advanced Features
+  - [x] 连接的创建、编辑和测试
+  - [x] 支持 MySQL、PostgreSQL、SQLite（初始数据库）
+  - [x] 连接分组管理
+  - [x] 连接导入/导出
+  - [x] 连接加密存储（安全增强）
 
-- Table Management
-  - View, create, edit, and delete tables
-  - Data browsing and filtering
-- Data Import/Export
-  - Support for various formats (CSV, SQL, etc.)
-- Visual Query Builder
-  - Drag-and-drop interface for building queries
+- UI 布局和导航
 
-### Phase 4: Refinement and Polishing
+  - [x] 带连接树的侧边栏
+  - [x] 多连接/查询的标签界面
+  - [ ] 自定义工具栏
+  - [ ] 状态栏和连接状态指示
 
-- Performance optimization
-- User preference settings
-- Error handling and logging
-- Themes and customization
+- 查询编辑器
+  - [x] 带语法高亮的 SQL 编辑器
+  - [x] 查询执行和结果显示
+  - [ ] SQL 格式化和语法检查
+  - [x] 查询历史和收藏
+  - [ ] 多查询执行与事务支持
+  - [ ] 查询计划可视化
 
-## Timeline
+### 第 3 阶段：高级功能
 
-- Phase 1: 1-2 weeks
-- Phase 2: 3-4 weeks
-- Phase 3: 3-4 weeks
-- Phase 4: 2 weeks
+- 表管理
 
-## Initial Tasks
+  - [x] 查看、创建、编辑和删除表
+  - [x] 数据浏览和筛选
+  - [ ] 行内编辑功能增强
+  - [ ] 批量操作（插入、更新、删除）
+  - [ ] 表结构比较和同步
+  - [ ] 自定义列视图和列排序
 
-1. Set up project structure and configuration files
-2. Create basic Electron main process
-3. Configure Vue with Tailwind and Element Plus
-4. Implement basic UI layout
-5. Build database connection management feature
+- 数据导入/导出
+
+  - [ ] 支持多种格式（CSV、SQL、Excel、JSON 等）
+  - [ ] 导入向导和数据映射
+  - [ ] 导出模板和预设
+  - [ ] 自动备份和计划导出
+
+- 查询构建器
+
+  - [ ] 拖放式界面构建查询
+  - [ ] 关系可视化
+  - [ ] 嵌套查询支持
+  - [ ] 条件构建器
+
+- 数据库对象管理
+  - [ ] 视图创建和编辑
+  - [ ] 存储过程和函数
+  - [ ] 触发器管理
+  - [ ] 用户和权限管理
+
+### 第 4 阶段：功能完善和性能优化
+
+- 性能优化
+
+  - [ ] 大数据集处理优化
+  - [ ] 查询执行性能监控
+  - [ ] 缓存策略实现
+  - [ ] 异步加载优化
+
+- 用户体验增强
+
+  - [ ] 用户偏好设置
+  - [ ] 快捷键配置
+  - [ ] 多语言支持
+  - [ ] 视觉主题和自定义
+
+- 安全与错误处理
+
+  - [ ] 连接加密和安全审计
+  - [ ] 详细日志记录
+  - [ ] 错误处理和恢复机制
+  - [ ] SQL 注入防护
+
+- 高级特性
+  - [ ] 数据可视化和图表
+  - [ ] 数据库健康监控
+  - [ ] 智能 SQL 建议
+  - [ ] 云同步和团队协作
+
+## 时间线
+
+- 第 1 阶段：1-2 周（已完成）
+- 第 2 阶段：4-6 周
+- 第 3 阶段：6-8 周
+- 第 4 阶段：4-6 周
+
+## 当前任务
+
+1. 完善数据库连接管理功能
+
+   - 连接分组功能
+   - 实现连接导入/导出
+   - 增强连接测试，提供更详细的连接信息
+
+2. 增强查询编辑器功能
+
+   - 实现完整的 SQL 语法高亮和自动完成
+   - 添加查询历史记录功能
+   - 实现查询结果导出功能
+   - 添加 SQL 格式化工具
+
+3. 开发表管理高级功能
+
+   - 完善表结构编辑器
+   - 实现表数据批量编辑
+   - 优化大数据表的浏览性能
+   - 添加字段和索引管理界面
+
+4. 启动首批高级功能开发
+   - 数据导入/导出向导
+   - 可视化查询构建器原型
+   - 视图和存储过程管理
+
+## 下一步迭代计划
+
+1. 实现设置界面，包括界面主题、字体大小、连接超时设置等
+2. 设计监控仪表盘，显示数据库基本性能指标
+3. 开发插件系统，允许通过第三方插件扩展功能
+4. 实现备份和恢复工具
+
+## 质量保证计划
+
+1. 单元测试：核心业务逻辑覆盖率 > 80%
+2. 集成测试：关键功能流程自动化测试
+3. 用户测试：每个迭代结束后进行小规模用户测试
+4. 性能基准：定期进行大数据集性能测试
+
+## 风险管理
+
+1. 技术风险：不同数据库系统的兼容性问题
+
+   - 缓解：模块化设计，为每种数据库类型创建适配器
+
+2. 性能风险：处理大型数据集时的性能问题
+
+   - 缓解：实现虚拟滚动、分页加载和数据缓存
+
+3. 安全风险：敏感数据库凭据的处理
+
+   - 缓解：实现加密存储和安全传输机制
+
+4. 用户体验风险：功能过于复杂导致用户困惑
+   - 缓解：渐进式功能展示和上下文帮助系统

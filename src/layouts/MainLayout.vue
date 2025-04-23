@@ -1,6 +1,6 @@
 <template>
   <div class="flex h-screen overflow-hidden">
-    <!-- Sidebar -->
+    <!-- 侧边栏 -->
     <div class="w-64 bg-white dark:bg-gray-800 shadow-md overflow-y-auto">
       <div class="p-4">
         <h1 class="text-xl font-bold text-primary-600">Electron DBM</h1>
@@ -13,49 +13,57 @@
           background-color="transparent"
         >
           <el-menu-item index="/">
-            <el-icon><i class="fas fa-home"></i></el-icon>
-            <span>Home</span>
+            <el-icon>
+              <Icon icon="mdi:home" />
+            </el-icon>
+            <span>首页</span>
           </el-menu-item>
           <el-menu-item index="/connections">
-            <el-icon><i class="fas fa-database"></i></el-icon>
-            <span>Connections</span>
+            <el-icon>
+              <Icon icon="mdi:database" />
+            </el-icon>
+            <span>连接管理</span>
           </el-menu-item>
           
-          <!-- Connection tree will go here -->
+          <!-- 连接树将在此处显示 -->
           <el-sub-menu index="connection-list">
             <template #title>
-              <el-icon><i class="fas fa-server"></i></el-icon>
-              <span>My Connections</span>
+              <el-icon>
+                <Icon icon="mdi:server" />
+              </el-icon>
+              <span>我的连接</span>
             </template>
-            <!-- Sample connection, will be dynamic later -->
+            <!-- 示例连接，后续会动态生成 -->
             <el-menu-item index="/query/1">
-              <span>Sample Connection</span>
+              <span>示例连接</span>
             </el-menu-item>
           </el-sub-menu>
         </el-menu>
       </div>
     </div>
 
-    <!-- Main content -->
+    <!-- 主内容区域 -->
     <div class="flex-1 flex flex-col overflow-hidden">
-      <!-- Header -->
+      <!-- 页头 -->
       <header class="bg-white dark:bg-gray-800 shadow-sm h-14 flex items-center px-4">
         <div class="flex-1 flex items-center gap-4">
           <el-button type="primary" plain>
-            New Connection
+            <Icon icon="mdi:database-plus" class="mr-1" />
+            新建连接
           </el-button>
           <el-button plain>
-            New Query
+            <Icon icon="mdi:file-code" class="mr-1" />
+            新建查询
           </el-button>
         </div>
         <div>
           <el-button circle>
-            <i class="fas fa-cog"></i>
+            <Icon icon="mdi:cog" />
           </el-button>
         </div>
       </header>
 
-      <!-- Main content -->
+      <!-- 主要内容 -->
       <main class="flex-1 overflow-y-auto bg-gray-100 dark:bg-gray-900">
         <router-view />
       </main>
@@ -64,7 +72,7 @@
 </template>
 
 <script setup lang="ts">
-// Layout component logic goes here
+import { Icon } from '@iconify/vue';
 </script>
 
 <style scoped>

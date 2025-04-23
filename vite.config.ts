@@ -12,6 +12,9 @@ export default defineConfig({
       {
         // Main process entry file
         entry: 'electron/main/index.ts',
+        onstart: (options) => {
+          options.startup();
+        },
         vite: {
           build: {
             outDir: 'dist-electron/main',
@@ -29,6 +32,14 @@ export default defineConfig({
             outDir: 'dist-electron/preload',
             rollupOptions: {
               external: ['electron'],
+            },
+            minify: false,
+            commonjsOptions: {
+              ignoreDynamicRequires: true,
+            },
+            lib: {
+              entry: 'electron/preload/index.ts',
+              formats: ['cjs'],
             },
           },
         },

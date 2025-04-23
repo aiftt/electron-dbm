@@ -1,18 +1,18 @@
 <template>
-  <div class="min-h-screen flex items-center justify-center bg-gray-50 dark:bg-gray-900">
+  <div class="h-full flex flex-col items-center justify-center">
     <div class="text-center">
-      <h1 class="text-6xl font-bold text-primary-600 mb-4">404</h1>
-      <h2 class="text-2xl font-medium text-gray-800 dark:text-gray-200 mb-6">Page Not Found</h2>
-      <p class="text-gray-500 dark:text-gray-400 mb-8">
-        The page you are looking for doesn't exist or has been moved.
+      <div class="text-9xl font-bold text-gray-200 dark:text-gray-700">404</div>
+      <h1 class="text-3xl font-bold mb-4">页面不存在</h1>
+      <p class="text-gray-500 dark:text-gray-400 mb-6">
+        您要查找的页面可能已被移动或删除。
       </p>
-      <el-button type="primary" @click="$router.push('/')">
-        Return to Home
-      </el-button>
+      <router-link to="/" class="el-button el-button--primary">
+        <Icon icon="mdi:home" class="mr-2" /> 返回首页
+      </router-link>
     </div>
   </div>
 </template>
 
 <script setup lang="ts">
-// Not Found page logic would go here
+import { Icon } from '@iconify/vue';
 </script> 
