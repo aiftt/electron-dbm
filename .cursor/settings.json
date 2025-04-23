@@ -1,0 +1,56 @@
+{
+  "formatter": {
+    "indentSize": 2,
+    "indentStyle": "space",
+    "lineWidth": 100
+  },
+  "linter": {
+    "rules": {
+      "complexity": "error",
+      "max-depth": ["error", 4],
+      "max-lines": ["error", 300],
+      "max-params": ["error", 4],
+      "no-console": "warn",
+      "no-unused-vars": "warn"
+    }
+  },
+  "typescript": {
+    "strict": true,
+    "noImplicitAny": true,
+    "strictNullChecks": true
+  },
+  "vue": {
+    "indentScriptAndStyle": true,
+    "singleQuote": true,
+    "bracketSpacing": true
+  },
+  "javascript": {
+    "singleQuote": true,
+    "trailingComma": "es5",
+    "semi": true,
+    "tabWidth": 2
+  },
+  "css": {
+    "indentSize": 2
+  },
+  "html": {
+    "indentSize": 2
+  },
+  "fileAssociations": {
+    "*.vue": "vue"
+  },
+  "search": {
+    "exclude": [
+      "node_modules",
+      "dist",
+      ".git"
+    ]
+  },
+  "editor": {
+    "rulers": [100],
+    "tabSize": 2,
+    "insertSpaces": true,
+    "trimTrailingWhitespace": true,
+    "insertFinalNewline": true
+  }
+} 
