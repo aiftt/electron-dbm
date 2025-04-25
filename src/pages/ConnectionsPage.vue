@@ -407,7 +407,7 @@ const exportJson = ref('');
 const exportWithPasswords = ref(false);
 
 // 连接表单
-const connectionForm = reactive<DbConnection>({
+const connectionForm = reactive<Partial<DbConnection>>({
   id: 0,
   name: '',
   type: 'mysql',
@@ -454,7 +454,7 @@ function editConnection(connection: DbConnection) {
 function duplicateConnection(connection: DbConnection) {
   isEditingConnection.value = false;
   const duplicate = { ...connection };
-  delete duplicate.id;
+  duplicate.id = undefined as unknown as number;
   duplicate.name = `${duplicate.name} (复制)`;
   Object.assign(connectionForm, duplicate);
   showNewConnectionDialog.value = true;
@@ -475,20 +475,26 @@ function showMoveConnectionDialog(connection: DbConnection) {
   showMoveDialog.value = true;
 }
 
+function saveConnectionsToStorage() {
+  storageService.saveConnections(connections.value);
+  // 触发自定义事件以通知其他组件连接已更新
+  window.dispatchEvent(new CustomEvent('connections-updated'));
+}
+
 function saveConnection() {
   // 表单验证
-  if (!connectionForm.name.trim()) {
+  if (!connectionForm.name?.trim()) {
     ElMessage.warning('连接名称不能为空');
     return;
   }
   
-  if (!connectionForm.database.trim()) {
+  if (!connectionForm.database?.trim() && connectionForm.type !== 'sqlite') {
     ElMessage.warning('数据库名称不能为空');
     return;
   }
   
   if (connectionForm.type !== 'sqlite') {
-    if (!connectionForm.host.trim()) {
+    if (!connectionForm.host?.trim()) {
       ElMessage.warning('主机地址不能为空');
       return;
     }
@@ -498,18 +504,18 @@ function saveConnection() {
     // 编辑现有连接
     const index = connections.value.findIndex(c => c.id === connectionForm.id);
     if (index !== -1) {
-      connections.value[index] = { ...connectionForm };
+      connections.value[index] = { ...connectionForm as DbConnection };
     }
   } else {
     // 添加新连接
     const newId = connections.value.length > 0 
       ? Math.max(...connections.value.map(c => c.id)) + 1 
       : 1;
-    connections.value.push({ ...connectionForm, id: newId });
+    connections.value.push({ ...(connectionForm as any), id: newId });
   }
   
   // 保存到本地存储
-  storageService.saveConnections(connections.value);
+  saveConnectionsToStorage();
   
   showNewConnectionDialog.value = false;
   isEditingConnection.value = false;
@@ -536,7 +542,7 @@ function deleteConnection() {
     connections.value = connections.value.filter(c => c.id !== connectionToDelete.value!.id);
     
     // 保存到本地存储
-    storageService.saveConnections(connections.value);
+    saveConnectionsToStorage();
     
     showDeleteConfirmation.value = false;
     connectionToDelete.value = null;
@@ -587,7 +593,7 @@ function moveConnection() {
     connections.value[index].group = targetGroupName;
     
     // 保存到本地存储
-    storageService.saveConnections(connections.value);
+    saveConnectionsToStorage();
     
     ElMessage.success(`已将连接移动到 "${targetGroupName}" 分组`);
   }
@@ -627,6 +633,9 @@ function confirmImport() {
     
     // 重新加载连接列表
     connections.value = storageService.loadConnections();
+    
+    // 通知其他组件连接已更新
+    window.dispatchEvent(new CustomEvent('connections-updated'));
     
     // 关闭对话框
     showImportDialog.value = false;

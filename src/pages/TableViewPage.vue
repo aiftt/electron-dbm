@@ -209,8 +209,22 @@ const connectionName = ref('本地 MySQL');
 const activeTab = ref('data');
 
 // 表格数据状态
-const tableData = ref([]);
-const tableColumns = ref([]);
+interface TableColumn {
+  name: string;
+  type: string;
+  nullable: boolean;
+  key: string;
+  default: string | null;
+  extra: string;
+}
+
+interface TableRow {
+  [key: string]: any;
+  id: number;
+}
+
+const tableData = ref<TableRow[]>([]);
+const tableColumns = ref<TableColumn[]>([]);
 const totalRows = ref(100);
 const pageSize = ref(25);
 const currentPage = ref(1);
@@ -219,10 +233,11 @@ const filter = ref('');
 // 对话框
 const showEditDialog = ref(false);
 const showInsertDialog = ref(false);
+const showStructureDialog = ref(false);
 const showDeleteConfirmation = ref(false);
-const editForm = reactive({});
-const insertForm = reactive({});
-const selectedRow = ref(null);
+const editForm = reactive<Record<string, any>>({});
+const insertForm = reactive<Record<string, any>>({});
+const selectedRow = ref<TableRow | null>(null);
 
 function refreshData() {
   // 在实际应用中，这会从服务器获取数据
@@ -273,35 +288,43 @@ function handleRowClick(row: any) {
   console.log('行点击:', row);
 }
 
-function editRow(row: any) {
-  selectedRow.value = row;
-  // 重置表单并填充行数据
-  Object.keys(editForm).forEach(key => delete editForm[key]);
-  Object.assign(editForm, row);
+function editRow(row: TableRow) {
+  selectedRow.value = { ...row };
+  Object.keys(row).forEach(key => {
+    editForm[key] = row[key];
+  });
   showEditDialog.value = true;
 }
 
 function saveRow() {
-  // 在实际应用中，这会将编辑后的行保存到数据库
+  // 在实际应用中，这会调用API保存数据
+  if (!editForm.id) {
+    console.error('Missing ID in edit form');
+    return;
+  }
+  
   console.log('保存行:', editForm);
   // 更新表格中的行
-  const index = tableData.value.findIndex(row => row.id === editForm.id);
+  const index = tableData.value.findIndex(r => r.id === editForm.id);
   if (index !== -1) {
-    tableData.value[index] = { ...editForm };
+    tableData.value[index] = { ...editForm as TableRow };
   }
+  
   showEditDialog.value = false;
 }
 
-function confirmDeleteRow(row: any) {
-  selectedRow.value = row;
+function confirmDeleteRow(row: TableRow) {
+  selectedRow.value = { ...row };
   showDeleteConfirmation.value = true;
 }
 
 function deleteRow() {
-  // 在实际应用中，这会从数据库中删除行
-  console.log('删除行:', selectedRow.value);
-  // 从表格中移除行
-  tableData.value = tableData.value.filter(row => row.id !== selectedRow.value.id);
+  if (!selectedRow.value) return;
+  
+  // 在实际应用中，这会调用API删除数据
+  const id = selectedRow.value.id;
+  tableData.value = tableData.value.filter(r => r.id !== id);
+  
   showDeleteConfirmation.value = false;
   selectedRow.value = null;
 }
@@ -310,18 +333,25 @@ function insertRow() {
   // 在实际应用中，这会向数据库插入新行
   console.log('插入行:', insertForm);
   // 将行添加到表格
-  const newId = Math.max(...tableData.value.map(row => row.id)) + 1;
+  const newId = Math.max(...tableData.value.map(r => r.id)) + 1;
   tableData.value.unshift({ ...insertForm, id: newId });
   showInsertDialog.value = false;
   // 重置表单
   Object.keys(insertForm).forEach(key => delete insertForm[key]);
 }
 
-function formatColumnValue(value: any, type: string) {
+function formatColumnValue(value: any, type: string): any {
   if (value === null) return 'NULL';
-  if (type.includes('tinyint') && (value === 0 || value === 1)) {
+  
+  // 根据列类型格式化值
+  if (type.includes('datetime')) {
+    return new Date(value).toLocaleString();
+  } else if (type.includes('date')) {
+    return new Date(value).toLocaleDateString();
+  } else if (type.includes('tinyint') && (value === 0 || value === 1)) {
     return value === 1 ? '是' : '否';
   }
+  
   return value;
 }
 

@@ -2,6 +2,7 @@ const { app, BrowserWindow, shell, ipcMain } = require('electron');
 const { release } = require('node:os');
 const { join } = require('node:path');
 // const { update } = require('./update');
+const { initDatabaseService } = require('./database-service');
 
 // CommonJS中已经定义了__dirname，不需要重新定义
 
@@ -66,6 +67,9 @@ async function createWindow() {
 // This method will be called when Electron has finished
 // initialization and is ready to create browser windows.
 app.whenReady().then(() => {
+  // 初始化数据库服务
+  initDatabaseService();
+  
   createWindow();
   // update();
 });

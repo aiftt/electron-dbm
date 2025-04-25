@@ -1,25 +1,51 @@
 /**
  * 数据库服务
- * 提供数据库连接测试和操作功能
+ * 处理数据库连接和查询操作
  */
 
-// 数据库连接配置接口
+import { ipcRenderer } from 'electron';
+import { ref } from 'vue';
+import { ElMessage } from 'element-plus';
+
 export interface DbConnection {
   id: number;
   name: string;
-  type: 'mysql' | 'postgresql' | 'sqlite';
+  type: string;
   host?: string;
   port?: number;
-  database: string;
   username?: string;
   password?: string;
-  timeout?: number; // 连接超时时间（毫秒）
-  useSSL?: boolean; // 是否使用SSL连接
-  charset?: string; // 字符集
-  group?: string; // 连接分组
+  database?: string;
+  filename?: string;
+  group?: string;
+  useSSL?: boolean;
+  timeout?: number;
 }
 
-// 连接测试结果接口
+export interface TableColumn {
+  name: string;
+  type: string;
+  nullable: boolean;
+  isPrimary: boolean;
+  defaultValue?: string;
+  comment?: string;
+}
+
+export interface DbObject {
+  name: string;
+  type: 'table' | 'view' | 'procedure' | 'function';
+  schema?: string;
+}
+
+export interface QueryResult {
+  columns: string[];
+  rows: any[];
+  affectedRows?: number;
+  executionTime: number;
+  error?: string;
+}
+
+// 添加测试结果接口定义
 export interface ConnectionTestResult {
   success: boolean;
   message: string;
@@ -32,281 +58,301 @@ export interface ConnectionTestResult {
     timezone?: string;
   };
   timing?: {
-    connect: number; // 连接耗时
-    query?: number;  // 查询耗时
-    total: number;   // 总耗时
+    connect: number;
+    query?: number;
+    total: number;
   };
 }
 
+// 定义对象类型
+export type DbObjectType = 'table' | 'view' | 'procedure' | 'function';
+
+// 状态管理：当前连接
+export const currentConnection = ref<DbConnection | null>(null);
+export const connectionStatus = ref<'connected' | 'connecting' | 'disconnected' | 'error'>('disconnected');
+export const connectionError = ref<string | null>(null);
+
 /**
- * 数据库服务类
+ * 测试数据库连接
+ * @param connection 数据库连接信息
+ * @returns 测试结果，包含是否成功和可能的错误信息
  */
-export class DatabaseService {
-  /**
-   * 测试数据库连接
-   * @param connection 数据库连接配置
-   * @returns 连接测试结果
-   */
-  async testConnection(connection: DbConnection): Promise<ConnectionTestResult> {
-    try {
-      // 记录开始时间
-      const startTime = performance.now();
-      
-      // 模拟连接测试
-      console.log(`测试连接: ${connection.name} (${connection.type})`);
-      
-      // 检查连接配置
-      this.validateConnectionConfig(connection);
-      
-      // 根据数据库类型进行不同的连接测试
-      let result: ConnectionTestResult;
-      switch (connection.type) {
-        case 'mysql':
-          result = await this.testMySqlConnection(connection);
-          break;
-        case 'postgresql':
-          result = await this.testPostgresConnection(connection);
-          break;
-        case 'sqlite':
-          result = await this.testSqliteConnection(connection);
-          break;
-        default:
-          return {
-            success: false,
-            message: '不支持的数据库类型',
-            timing: {
-              connect: 0,
-              total: performance.now() - startTime
-            }
-          };
-      }
-      
-      // 计算总耗时
-      const totalTime = performance.now() - startTime;
-      if (result.timing) {
-        result.timing.total = totalTime;
-      } else {
-        result.timing = {
-          connect: totalTime,
-          total: totalTime
-        };
-      }
-      
-      return result;
-    } catch (error) {
-      console.error('连接测试失败:', error);
-      return {
-        success: false,
-        message: '连接测试失败',
-        details: error instanceof Error ? error.message : String(error),
-        timing: {
-          connect: 0,
-          total: 0
-        }
-      };
-    }
-  }
-
-  /**
-   * 验证连接配置
-   * @param connection 数据库连接配置
-   */
-  private validateConnectionConfig(connection: DbConnection): void {
-    // 检查必填字段
-    if (!connection.name) {
-      throw new Error('连接名称不能为空');
-    }
-    
-    if (!connection.database && connection.type !== 'sqlite') {
-      throw new Error('数据库名称不能为空');
-    }
-    
-    // 检查特定类型的数据库配置
-    switch (connection.type) {
-      case 'mysql':
-      case 'postgresql':
-        if (!connection.host) {
-          throw new Error('主机地址不能为空');
-        }
-        if (!connection.port) {
-          throw new Error('端口号不能为空');
-        }
-        break;
-      case 'sqlite':
-        // SQLite 只需要 database 字段（实际是文件路径）
-        if (!connection.database) {
-          throw new Error('数据库文件路径不能为空');
-        }
-        break;
-    }
-
-    // 设置默认值
-    if (!connection.timeout) {
-      connection.timeout = 10000; // 默认10秒超时
-    }
-  }
-
-  /**
-   * 测试 MySQL 连接
-   * @param connection MySQL 连接配置
-   * @returns 连接测试结果
-   */
-  private async testMySqlConnection(connection: DbConnection): Promise<ConnectionTestResult> {
-    // 记录开始时间
-    const startTime = performance.now();
-    
-    // 模拟 MySQL 连接测试
-    // 实际实现中会使用实际的 MySQL 客户端库进行连接测试
-    const connectTime = await this.simulateConnection(connection);
-    
-    // 模拟获取服务器信息
-    const serverInfo = {
-      version: '8.0.28',
-      platform: 'MySQL Community Server (GPL)',
-      connectionId: Math.floor(Math.random() * 10000),
-      charset: connection.charset || 'utf8mb4',
-      timezone: '+08:00'
-    };
-
+export async function testConnection(connection: DbConnection): Promise<ConnectionTestResult> {
+  try {
+    const result = await ipcRenderer.invoke('db:test-connection', connection);
+    return result;
+  } catch (error) {
+    console.error('测试连接失败:', error);
     return {
-      success: true,
-      message: '连接成功',
-      serverInfo,
-      timing: {
-        connect: connectTime,
-        query: 0,
-        total: performance.now() - startTime
-      }
+      success: false,
+      message: error instanceof Error ? error.message : String(error)
     };
-  }
-
-  /**
-   * 测试 PostgreSQL 连接
-   * @param connection PostgreSQL 连接配置
-   * @returns 连接测试结果
-   */
-  private async testPostgresConnection(connection: DbConnection): Promise<ConnectionTestResult> {
-    // 记录开始时间
-    const startTime = performance.now();
-    
-    // 模拟 PostgreSQL 连接测试
-    // 实际实现中会使用实际的 PostgreSQL 客户端库进行连接测试
-    const connectTime = await this.simulateConnection(connection);
-    
-    // 模拟获取服务器信息
-    const serverInfo = {
-      version: '14.2',
-      platform: 'PostgreSQL 14.2 on x86_64-pc-linux-gnu',
-      connectionId: Math.floor(Math.random() * 10000),
-      charset: connection.charset || 'UTF8',
-      timezone: 'Asia/Shanghai'
-    };
-
-    return {
-      success: true,
-      message: '连接成功',
-      serverInfo,
-      timing: {
-        connect: connectTime,
-        query: 0,
-        total: performance.now() - startTime
-      }
-    };
-  }
-
-  /**
-   * 测试 SQLite 连接
-   * @param connection SQLite 连接配置
-   * @returns 连接测试结果
-   */
-  private async testSqliteConnection(connection: DbConnection): Promise<ConnectionTestResult> {
-    // 记录开始时间
-    const startTime = performance.now();
-    
-    // 模拟 SQLite 连接测试
-    // 实际实现中会检查文件是否存在以及是否可读写
-    const connectTime = await this.simulateConnection(connection);
-    
-    // 模拟获取服务器信息
-    const serverInfo = {
-      version: '3.36.0',
-      platform: 'SQLite',
-      connectionId: 1,
-      charset: 'UTF-8',
-      timezone: 'local'
-    };
-
-    return {
-      success: true,
-      message: '连接成功',
-      serverInfo,
-      timing: {
-        connect: connectTime,
-        query: 0,
-        total: performance.now() - startTime
-      }
-    };
-  }
-
-  /**
-   * 模拟连接延迟和结果
-   * @param connection 数据库连接配置
-   * @returns 连接耗时（毫秒）
-   */
-  private async simulateConnection(connection: DbConnection): Promise<number> {
-    // 模拟连接延迟
-    return new Promise((resolve, reject) => {
-      // 随机成功或失败（80% 成功率）
-      const shouldSucceed = Math.random() < 0.8;
-      
-      // 模拟连接耗时
-      const delay = Math.floor(Math.random() * 300) + 200; // 200-500ms的随机延迟
-      
-      // 设置连接超时
-      const timeout = connection.timeout || 10000; // 默认10秒
-      
-      // 模拟超时
-      if (delay > timeout) {
-        setTimeout(() => {
-          reject(new Error(`连接超时（超过 ${timeout/1000} 秒）`));
-        }, timeout);
-        return;
-      }
-      
-      // 正常连接流程
-      setTimeout(() => {
-        if (shouldSucceed) {
-          resolve(delay);
-        } else {
-          // 根据数据库类型生成不同的错误信息
-          let errorMessage = '';
-          switch (connection.type) {
-            case 'mysql':
-              errorMessage = 'MySQL 连接错误: 无法连接到指定主机和端口';
-              break;
-            case 'postgresql':
-              errorMessage = 'PostgreSQL 连接错误: 身份验证失败';
-              break;
-            case 'sqlite':
-              errorMessage = 'SQLite 错误: 数据库文件不存在或无法访问';
-              break;
-          }
-          reject(new Error(errorMessage));
-        }
-      }, delay);
-    });
-  }
-
-  /**
-   * 保存连接到历史记录
-   * @param connection 数据库连接配置
-   */
-  saveConnectionHistory(connection: DbConnection): void {
-    // 这里可以实现将成功连接的数据库添加到历史记录
-    console.log(`将连接 ${connection.name} 添加到历史记录`);
-    // 实际实现中将保存到本地存储或数据库
   }
 }
 
-// 创建并导出数据库服务实例
-export const databaseService = new DatabaseService(); 
+/**
+ * 连接到数据库
+ * @param connection 数据库连接信息
+ * @returns 连接结果
+ */
+export async function connectToDatabase(connection: DbConnection): Promise<boolean> {
+  try {
+    connectionStatus.value = 'connecting';
+    connectionError.value = null;
+    
+    const result = await ipcRenderer.invoke('db:connect', connection);
+    
+    if (result.success) {
+      currentConnection.value = connection;
+      connectionStatus.value = 'connected';
+      return true;
+    } else {
+      connectionError.value = result.message;
+      connectionStatus.value = 'error';
+      ElMessage.error(`连接失败: ${result.message}`);
+      return false;
+    }
+  } catch (error) {
+    connectionStatus.value = 'error';
+    connectionError.value = error instanceof Error ? error.message : String(error);
+    ElMessage.error(`连接失败: ${connectionError.value}`);
+    return false;
+  }
+}
+
+/**
+ * 断开当前数据库连接
+ */
+export async function disconnectDatabase(): Promise<void> {
+  if (currentConnection.value) {
+    try {
+      await ipcRenderer.invoke('db:disconnect', currentConnection.value.id);
+      currentConnection.value = null;
+      connectionStatus.value = 'disconnected';
+    } catch (error) {
+      console.error('断开连接失败:', error);
+      ElMessage.warning('断开连接时发生错误，但已在本地标记为已断开');
+      currentConnection.value = null;
+      connectionStatus.value = 'disconnected';
+    }
+  }
+}
+
+/**
+ * 获取数据库对象列表（表、视图、存储过程等）
+ * @param connectionId 数据库连接ID
+ * @param type 对象类型，可选，不指定则返回所有类型
+ * @returns 数据库对象列表
+ */
+export async function getDatabaseObjects(
+  connectionId: number,
+  type?: DbObjectType
+): Promise<DbObject[]> {
+  try {
+    const objects = await ipcRenderer.invoke('db:get-objects', {
+      connectionId,
+      type
+    });
+    return objects;
+  } catch (error) {
+    console.error('获取数据库对象失败:', error);
+    ElMessage.error('获取数据库对象失败');
+    return [];
+  }
+}
+
+/**
+ * 获取表的列信息
+ * @param connectionId 数据库连接ID
+ * @param table 表名
+ * @param schema 模式名（可选）
+ * @returns 表列信息
+ */
+export async function getTableColumns(
+  connectionId: number,
+  table: string,
+  schema?: string
+): Promise<TableColumn[]> {
+  try {
+    const columns = await ipcRenderer.invoke('db:get-table-columns', {
+      connectionId,
+      table,
+      schema
+    });
+    return columns;
+  } catch (error) {
+    console.error('获取表列信息失败:', error);
+    ElMessage.error('获取表列信息失败');
+    return [];
+  }
+}
+
+/**
+ * 执行 SQL 查询
+ * @param connectionId 数据库连接ID
+ * @param sql SQL 查询语句
+ * @param params 查询参数（可选）
+ * @returns 查询结果
+ */
+export async function executeQuery(
+  connectionId: number,
+  sql: string,
+  params?: any[]
+): Promise<QueryResult> {
+  const startTime = performance.now();
+  
+  try {
+    const result = await ipcRenderer.invoke('db:execute-query', {
+      connectionId,
+      sql,
+      params: params || []
+    });
+    
+    const executionTime = performance.now() - startTime;
+    
+    if (result.error) {
+      return {
+        columns: [],
+        rows: [],
+        executionTime,
+        error: result.error
+      };
+    }
+    
+    return {
+      columns: result.columns || [],
+      rows: result.rows || [],
+      affectedRows: result.affectedRows,
+      executionTime
+    };
+  } catch (error) {
+    const executionTime = performance.now() - startTime;
+    console.error('执行查询失败:', error);
+    
+    return {
+      columns: [],
+      rows: [],
+      executionTime,
+      error: error instanceof Error ? error.message : String(error)
+    };
+  }
+}
+
+/**
+ * 获取存储过程的详细信息
+ * @param connectionId 数据库连接ID
+ * @param procedure 存储过程名称
+ * @param schema 模式名（可选）
+ * @returns 存储过程定义
+ */
+export async function getProcedureDefinition(
+  connectionId: number,
+  procedure: string,
+  schema?: string
+): Promise<string> {
+  try {
+    const definition = await ipcRenderer.invoke('db:get-procedure-definition', {
+      connectionId,
+      procedure,
+      schema
+    });
+    return definition;
+  } catch (error) {
+    console.error('获取存储过程定义失败:', error);
+    ElMessage.error('获取存储过程定义失败');
+    return '';
+  }
+}
+
+/**
+ * 获取可用的数据库列表
+ * @param connectionId 数据库连接ID
+ * @returns 数据库名称列表
+ */
+export async function getDatabases(connectionId: number): Promise<string[]> {
+  try {
+    const databases = await ipcRenderer.invoke('db:get-databases', {
+      connectionId
+    });
+    return databases;
+  } catch (error) {
+    console.error('获取数据库列表失败:', error);
+    ElMessage.error('获取数据库列表失败');
+    return [];
+  }
+}
+
+/**
+ * 切换当前数据库
+ * @param connectionId 数据库连接ID
+ * @param database 要切换到的数据库名称
+ * @returns 是否成功
+ */
+export async function changeDatabase(
+  connectionId: number,
+  database: string
+): Promise<boolean> {
+  try {
+    const result = await ipcRenderer.invoke('db:change-database', {
+      connectionId,
+      database
+    });
+    
+    if (result.success) {
+      // 更新当前连接信息中的数据库名
+      if (currentConnection.value && currentConnection.value.id === connectionId) {
+        currentConnection.value = {
+          ...currentConnection.value,
+          database
+        };
+      }
+      return true;
+    } else {
+      ElMessage.error(`切换数据库失败: ${result.message}`);
+      return false;
+    }
+  } catch (error) {
+    console.error('切换数据库失败:', error);
+    ElMessage.error('切换数据库失败');
+    return false;
+  }
+}
+
+/**
+ * 根据ID获取连接信息
+ * @param connectionId 连接ID
+ * @returns 连接信息
+ */
+export function getConnection(connectionId: number): DbConnection | null {
+  // 如果是当前连接，直接返回
+  if (currentConnection.value && currentConnection.value.id === connectionId) {
+    return currentConnection.value;
+  }
+  
+  // 否则从本地存储中查找
+  try {
+    const connectionsJson = localStorage.getItem('connections');
+    if (connectionsJson) {
+      const connections = JSON.parse(connectionsJson) as DbConnection[];
+      return connections.find(conn => conn.id === connectionId) || null;
+    }
+  } catch (error) {
+    console.error('获取连接信息失败:', error);
+  }
+  
+  return null;
+}
+
+// 导出统一的数据库服务对象，以兼容现有代码
+export const databaseService = {
+  testConnection,
+  connectToDatabase,
+  disconnectDatabase,
+  getDatabaseObjects,
+  getTableColumns,
+  executeQuery,
+  getProcedureDefinition,
+  getDatabases,
+  changeDatabase,
+  getConnection
+}; 

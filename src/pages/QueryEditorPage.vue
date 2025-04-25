@@ -28,28 +28,45 @@
               >
                 <el-sub-menu index="tables">
                   <template #title>
-                    <span class="text-sm">表</span>
+                    <Icon icon="mdi:table" class="mr-1" />
+                    <span>表</span>
                   </template>
-                  <el-menu-item v-for="table in databaseObjects.tables" :key="table" :index="`table-${table}`"
-                    @click="openTable(table)">
+                  <el-menu-item 
+                    v-for="table in databaseObjects.tables" 
+                    :key="table" 
+                    :index="`table-${table}`"
+                    @click="openTable(table)"
+                  >
                     {{ table }}
                   </el-menu-item>
                 </el-sub-menu>
                 
                 <el-sub-menu index="views">
                   <template #title>
-                    <span class="text-sm">视图</span>
+                    <Icon icon="mdi:eye" class="mr-1" />
+                    <span>视图</span>
                   </template>
-                  <el-menu-item v-for="view in databaseObjects.views" :key="view" :index="`view-${view}`">
+                  <el-menu-item 
+                    v-for="view in databaseObjects.views" 
+                    :key="view" 
+                    :index="`view-${view}`"
+                    @click="openTable(view)"
+                  >
                     {{ view }}
                   </el-menu-item>
                 </el-sub-menu>
                 
                 <el-sub-menu index="procedures">
                   <template #title>
-                    <span class="text-sm">存储过程</span>
+                    <Icon icon="mdi:function" class="mr-1" />
+                    <span>存储过程</span>
                   </template>
-                  <el-menu-item v-for="proc in databaseObjects.procedures" :key="proc" :index="`proc-${proc}`">
+                  <el-menu-item 
+                    v-for="proc in databaseObjects.procedures" 
+                    :key="proc" 
+                    :index="`proc-${proc}`"
+                    @click="openProcedure(proc)"
+                  >
                     {{ proc }}
                   </el-menu-item>
                 </el-sub-menu>
@@ -67,8 +84,8 @@
             <div class="p-3">
               <QueryBuilder 
                 :tables="databaseObjects.tables"
-                :columns="tableColumns"
-                @apply-query="loadSavedQuery"
+                :table-columns="tableColumns"
+                @sql-generated="sqlQuery = $event"
               />
             </div>
           </el-tab-pane>
@@ -82,8 +99,8 @@
           <div class="flex justify-between items-center mb-2">
             <div>
               <el-button-group>
-                <el-button type="primary" size="small" @click="executeQuery">
-                  <Icon icon="mdi:play" class="mr-1" /> 执行
+                <el-button type="primary" size="small" @click="executeQuery" :loading="isExecutingQuery">
+                  <Icon v-if="!isExecutingQuery" icon="mdi:play" class="mr-1" /> {{ isExecutingQuery ? '执行中...' : '执行' }}
                 </el-button>
                 <el-button size="small" @click="showSaveQueryDialog = true">
                   <Icon icon="mdi:content-save" class="mr-1" /> 保存
@@ -92,41 +109,9 @@
                   <Icon icon="mdi:file-plus" class="mr-1" /> 新建
                 </el-button>
               </el-button-group>
-              <el-button-group class="ml-2">
-                <el-button size="small" @click="formatSql">
-                  <Icon icon="mdi:format-align-left" class="mr-1" /> 格式化
-                </el-button>
-                <el-popover
-                  placement="bottom"
-                  :width="300"
-                  trigger="click"
-                >
-                  <template #reference>
-                    <el-button size="small">
-                      <Icon icon="mdi:cog" class="mr-1" /> 格式选项
-                    </el-button>
-                  </template>
-                  
-                  <div class="p-2">
-                    <h4 class="text-sm font-medium mb-3">SQL 格式化选项</h4>
-                    
-                    <div class="mb-2">
-                      <el-checkbox v-model="formatOptions.uppercase">
-                        关键字大写
-                      </el-checkbox>
-                    </div>
-                    
-                    <div class="mb-2">
-                      <div class="text-sm mb-1">缩进:</div>
-                      <el-radio-group v-model="formatOptions.indentSize" size="small">
-                        <el-radio-button link :value="2">2空格</el-radio-button>
-                        <el-radio-button link :value="4">4空格</el-radio-button>
-                        <el-radio-button link :value="0">Tab</el-radio-button>
-                      </el-radio-group>
-                    </div>
-                  </div>
-                </el-popover>
-              </el-button-group>
+              <el-button type="info" plain size="small" class="ml-2" @click="formatSql">
+                <Icon icon="mdi:format-align-left" class="mr-1" /> 格式化
+              </el-button>
             </div>
             <div>
               <el-select v-model="selectedDatabase" placeholder="选择数据库" size="small">
@@ -135,7 +120,7 @@
                   :key="db"
                   :label="db"
                   :value="db"
-                ></el-option>
+                />
               </el-select>
             </div>
           </div>
@@ -182,6 +167,17 @@
             </div>
           </div>
           
+          <!-- 查询错误信息 -->
+          <el-alert
+            v-if="queryError"
+            :title="queryError"
+            type="error"
+            show-icon
+            :closable="true"
+            class="mb-3"
+          />
+          
+          <!-- 查询结果表格 -->
           <el-table v-if="queryExecuted" :data="queryResults" border style="width: 100%" height="100%">
             <el-table-column 
               v-for="column in resultColumns" 
@@ -192,6 +188,12 @@
             ></el-table-column>
           </el-table>
           
+          <!-- 查询加载中 -->
+          <div v-else-if="isExecutingQuery" class="flex justify-center items-center h-64">
+            <el-skeleton :rows="5" animated class="w-full" />
+          </div>
+          
+          <!-- 未执行查询 -->
           <el-empty v-else description="暂无查询结果，请执行查询"></el-empty>
         </div>
       </div>
@@ -242,417 +244,478 @@
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted, computed, watch, reactive } from 'vue';
-import { useRoute, useRouter } from 'vue-router';
-import { Icon } from '@iconify/vue';
-import { ElMessage } from 'element-plus';
-import { storageService } from '../utils/storage';
-import { type DbConnection } from '../services/database';
-import { queryHistoryService } from '../services/query-history';
-import { sqlFormatter } from '../services/sql-formatter';
-import FavoriteQueries from '../components/FavoriteQueries.vue';
-import CodeMirrorEditor from '../components/CodeMirrorEditor.vue';
-import QueryBuilder from '../components/QueryBuilder.vue';
+import { ref, computed, onMounted, watch, nextTick } from 'vue'
+import { useRoute, useRouter } from 'vue-router'
+import { Icon } from '@iconify/vue'
+import { ElMessage, ElMessageBox } from 'element-plus'
+import { databaseService, type DbConnection } from '../services/database'
+import { storageService } from '../utils/storage'
+import CodeMirrorEditor from '../components/CodeMirrorEditor.vue'
+import FavoriteQueries from '../components/FavoriteQueries.vue'
+import QueryBuilder from '../components/QueryBuilder.vue'
 
-// 定义props以接收connectionId
-const props = defineProps<{
-  connectionId?: string | number
-}>();
+// 页面状态
+const route = useRoute()
+const router = useRouter()
+const connectionId = computed(() => Number(route.params.id))
+const connection = ref<DbConnection | null>(null)
+const selectedDatabase = ref('')
+const availableDatabases = ref<string[]>([])
 
-const route = useRoute();
-const router = useRouter();
-// 优先使用props传入的connectionId，如果没有则从路由参数获取
-const connectionId = computed(() => props.connectionId ? Number(props.connectionId) : Number(route.params.connectionId));
+// 查询编辑器状态
+const sqlEditorRef = ref(null)
+const sqlQuery = ref('')
+const isExecutingQuery = ref(false)
+const queryExecuted = ref(false)
+const queryResults = ref<any[]>([])
+const resultColumns = ref<string[]>([])
+const executionTime = ref(0)
+const queryError = ref('')
+const isDarkMode = ref(false)
 
-// 连接数据
-const connection = ref<DbConnection | null>(null);
-
-// 可用数据库
-const availableDatabases = ref(['test_db', 'information_schema', 'performance_schema']);
-const selectedDatabase = ref('test_db');
-
-// 数据库对象
+// 数据库对象状态
 const databaseObjects = ref({
-  tables: ['users', 'products', 'orders', 'order_items'],
-  views: ['active_users', 'product_inventory'],
-  procedures: ['get_user_orders', 'update_inventory']
-});
+  tables: [] as string[],
+  views: [] as string[],
+  procedures: [] as string[],
+  functions: [] as string[],
+  triggers: [] as string[]
+})
+const tableColumns = ref<Record<string, string[]>>({})
 
 // 标签页状态
-const activeTab = ref('query1');
-const tabs = ref([
-  { title: '查询 1', name: 'query1', content: '' }
-]);
+interface TabItem {
+  name: string;
+  title: string;
+  content?: string;
+}
 
-// 查询状态
-const sqlQuery = ref('SELECT * FROM users LIMIT 10;');
-const queryExecuted = ref(false);
-const queryResults = ref([]);
-const resultColumns = ref([]);
-const executionTime = ref(0);
+const activeTab = ref('query-1')
+const tabs = ref<TabItem[]>([
+  { name: 'query-1', title: '查询 1' }
+])
+let tabCounter = 1
 
 // 保存查询对话框
-const showSaveQueryDialog = ref(false);
-const saveQueryForm = reactive({
+const showSaveQueryDialog = ref(false)
+const saveQueryForm = ref({
   name: '',
   tags: [] as string[],
-  asFavorite: true
-});
+  asFavorite: false
+})
+const availableTags = ref([
+  '常用', '报表', '导出', '分析', '临时'
+])
 
-// SQL 格式化选项
-const formatOptions = reactive({
-  uppercase: true,
-  indentSize: 2
-});
+// 初始化页面
+onMounted(async () => {
+  // 加载连接信息
+  loadConnectionInfo()
 
-// SQL编辑器引用
-const sqlEditorRef = ref<InstanceType<typeof CodeMirrorEditor> | null>(null);
-
-// 表的列信息
-const tableColumns = ref<Record<string, string[]>>({});
-
-// 是否为暗黑模式
-const isDarkMode = computed(() => {
-  return document.documentElement.classList.contains('dark');
-});
-
-// 获取可用标签
-const availableTags = computed(() => {
-  // 获取全部已有标签
-  const queries = queryHistoryService.getQueryHistory();
-  const tagSet = new Set<string>();
-  
-  queries.forEach(item => {
-    if (item.tags) {
-      item.tags.forEach(tag => tagSet.add(tag));
+  // 检查是否有URL参数中的SQL
+  if (route.query.sql) {
+    sqlQuery.value = decodeURIComponent(route.query.sql as string)
+    await nextTick()
+    
+    // 如果有autorun参数，自动执行
+    if (route.query.autorun === 'true') {
+      executeQuery(true)
     }
-  });
+  }
   
-  return Array.from(tagSet);
-});
+  // 检测暗黑模式
+  isDarkMode.value = document.documentElement.classList.contains('dark')
+})
 
-function executeQuery() {
-  // 开始计时
-  const startTime = performance.now();
-  
-  // 在实际应用中，这会将查询发送到服务器
-  // 为了演示，我们将生成模拟数据
-  setTimeout(() => {
-    // 生成模拟列
-    resultColumns.value = ['id', 'username', 'email', 'created_at'];
+// 监听连接变化
+watch(connectionId, () => {
+  loadConnectionInfo()
+})
+
+// 加载连接信息和数据库对象
+async function loadConnectionInfo() {
+  try {
+    // 获取连接信息
+    connection.value = databaseService.getConnection(connectionId.value)
     
-    // 生成模拟结果
-    queryResults.value = Array.from({ length: 10 }, (_, i) => ({
-      id: i + 1,
-      username: `user${i + 1}`,
-      email: `user${i + 1}@example.com`,
-      created_at: new Date().toISOString().split('T')[0]
-    }));
-    
-    // 设置已执行标志
-    queryExecuted.value = true;
-    
-    // 计算执行时间
-    executionTime.value = Math.round(performance.now() - startTime);
-    
-    // 将查询添加到历史记录
-    if (connection.value) {
-      queryHistoryService.addQueryToHistory(
-        connection.value.id,
-        selectedDatabase.value,
-        sqlQuery.value,
-        executionTime.value,
-        queryResults.value.length
-      );
+    if (!connection.value) {
+      ElMessage.error('找不到连接信息')
+      return
     }
-  }, 500);
+    
+    // 设置初始数据库
+    selectedDatabase.value = connection.value.database || ''
+    
+    // 加载数据库列表
+    availableDatabases.value = await databaseService.getDatabases(connectionId.value)
+    
+    // 加载数据库对象
+    loadDatabaseObjects()
+  } catch (error) {
+    console.error('加载连接信息失败:', error)
+    ElMessage.error('加载连接信息失败')
+  }
 }
 
+// 加载数据库对象
+async function loadDatabaseObjects() {
+  if (!connection.value) return
+  
+  try {
+    const objects = await databaseService.getDatabaseObjects(connectionId.value)
+    
+    // 将对象按类型分类
+    const tables: string[] = []
+    const views: string[] = []
+    const procedures: string[] = []
+    const functions: string[] = []
+    
+    objects.forEach(obj => {
+      if (obj.type === 'table') {
+        tables.push(obj.name)
+      } else if (obj.type === 'view') {
+        views.push(obj.name)
+      } else if (obj.type === 'procedure') {
+        procedures.push(obj.name)
+      } else if (obj.type === 'function') {
+        functions.push(obj.name)
+      }
+    })
+    
+    databaseObjects.value = {
+      tables,
+      views,
+      procedures,
+      functions,
+      triggers: [] // 暂不支持触发器
+    }
+    
+    // 加载表结构
+    if (databaseObjects.value.tables.length > 0) {
+      await loadTableColumns()
+    }
+  } catch (error) {
+    console.error('加载数据库对象失败:', error)
+    ElMessage.error('加载数据库对象失败')
+  }
+}
+
+// 加载表结构
+async function loadTableColumns() {
+  if (!connection.value) return
+  
+  try {
+    for (const table of databaseObjects.value.tables) {
+      const columns = await databaseService.getTableColumns(
+        connectionId.value, 
+        table
+      )
+      
+      if (columns && columns.length > 0) {
+        const columnNames = columns.map((col: any) => col.name)
+        tableColumns.value[table] = columnNames
+      }
+    }
+  } catch (error) {
+    console.error('加载表结构失败:', error)
+  }
+}
+
+// 打开表
+function openTable(tableName: string) {
+  sqlQuery.value = `SELECT * FROM ${tableName} LIMIT 100;`
+}
+
+// 打开存储过程
+function openProcedure(procName: string) {
+  // 根据数据库类型获取查看存储过程定义的SQL
+  const dbType = connection.value?.type || 'mysql'
+  let sql = ''
+  
+  if (dbType === 'mysql') {
+    sql = `SHOW CREATE PROCEDURE ${procName};`
+  } else if (dbType === 'postgresql') {
+    sql = `SELECT prosrc FROM pg_proc WHERE proname = '${procName}';`
+  } else if (dbType === 'sqlite') {
+    sql = `SELECT sql FROM sqlite_master WHERE type='trigger' AND name='${procName}';`
+  }
+  
+  sqlQuery.value = sql
+}
+
+// 新建查询标签
+function newQuery() {
+  tabCounter++
+  const newTabName = `query-${tabCounter}`
+  const newTab = {
+    name: newTabName,
+    title: `查询 ${tabCounter}`
+  }
+  
+  tabs.value.push(newTab)
+  activeTab.value = newTabName
+  sqlQuery.value = ''
+  queryExecuted.value = false
+  queryResults.value = []
+  resultColumns.value = []
+  queryError.value = ''
+}
+
+// 删除标签
 function removeTab(targetName: string) {
-  const tabs = tabs.value;
-  if (activeTab.value === targetName) {
-    tabs.forEach((tab, index) => {
+  if (tabs.value.length === 1) {
+    ElMessage.warning('至少保留一个查询标签')
+    return
+  }
+  
+  const currentTabs = tabs.value
+  let activeName = activeTab.value
+
+  if (activeName === targetName) {
+    currentTabs.forEach((tab, index) => {
       if (tab.name === targetName) {
-        const nextTab = tabs[index + 1] || tabs[index - 1];
+        const nextTab = currentTabs[index + 1] || currentTabs[index - 1]
         if (nextTab) {
-          activeTab.value = nextTab.name;
+          activeName = nextTab.name
         }
       }
+    })
+  }
+  
+  activeTab.value = activeName
+  tabs.value = currentTabs.filter(tab => tab.name !== targetName)
+}
+
+// 执行SQL查询
+async function executeQuery(fromUrl = false) {
+  // 重置状态
+  queryResults.value = []
+  resultColumns.value = []
+  queryError.value = ''
+  queryExecuted.value = false
+  isExecutingQuery.value = true
+  
+  try {
+    // 验证连接
+    if (!connection.value) {
+      throw new Error('没有活动的数据库连接')
+    }
+    
+    // 验证查询内容
+    if (!sqlQuery.value.trim()) {
+      throw new Error('请输入SQL查询语句')
+    }
+    
+    // 执行查询
+    const result = await databaseService.executeQuery(
+      connectionId.value, 
+      sqlQuery.value
+    )
+    
+    // 设置结果
+    executionTime.value = result.executionTime
+    queryExecuted.value = true
+    
+    if (result.error) {
+      queryError.value = result.error
+      ElMessage.error(result.error)
+      return
+    }
+    
+    if (result.rows && result.rows.length > 0) {
+      queryResults.value = result.rows
+      resultColumns.value = result.columns
+    } else if (result.affectedRows !== undefined) {
+      // 非查询语句，显示受影响的行数
+      ElMessage.success(`执行成功: ${result.affectedRows} 行受影响`)
+    } else {
+      // 查询成功但无数据
+      queryResults.value = []
+      resultColumns.value = result.columns
+    }
+    
+    // 如果是从URL执行的，清除URL参数避免重复执行
+    if (fromUrl) {
+      router.replace({ 
+        path: route.path, 
+        query: {} 
+      })
+    }
+  } catch (error: any) {
+    console.error('执行查询失败:', error)
+    queryError.value = error.message || '执行查询失败'
+    ElMessage.error(queryError.value)
+  } finally {
+    isExecutingQuery.value = false
+  }
+}
+
+// Format SQL function
+function formatSqlQuery(sql: string, options: { indent?: number; uppercase?: boolean; linesBetweenQueries?: number } = {}): string {
+  // Default options
+  const indent = options.indent ?? 2;
+  const uppercase = options.uppercase ?? true;
+  
+  // Simple implementation for temporary use
+  let formatted = sql;
+  
+  // Convert keywords to uppercase if requested
+  if (uppercase) {
+    const keywords = ['SELECT', 'FROM', 'WHERE', 'ORDER BY', 'GROUP BY', 'HAVING', 'JOIN'];
+    keywords.forEach(keyword => {
+      const regex = new RegExp(`\\b${keyword.replace(/ /g, '\\s+')}\\b`, 'gi');
+      formatted = formatted.replace(regex, keyword);
     });
   }
   
-  tabs.value = tabs.filter(tab => tab.name !== targetName);
-}
-
-function openTable(tableName: string) {
-  // 为表生成 SELECT 查询
-  sqlQuery.value = `SELECT * FROM ${tableName} LIMIT 100;`;
+  // Add line breaks and indentation
+  formatted = formatted
+    .replace(/\s*SELECT\s+/gi, '\nSELECT ')
+    .replace(/\s*FROM\s+/gi, '\nFROM ')
+    .replace(/\s*WHERE\s+/gi, '\nWHERE ')
+    .replace(/\s*(?:AND|OR)\s+/gi, '\n  $& ')
+    .replace(/\s*GROUP BY\s+/gi, '\nGROUP BY ')
+    .replace(/\s*ORDER BY\s+/gi, '\nORDER BY ')
+    .replace(/\s*HAVING\s+/gi, '\nHAVING ');
   
-  // 加载表的列信息
-  loadTableColumns(tableName);
-}
-
-// 从收藏夹或历史记录中加载查询
-function loadSavedQuery(sql: string): void {
-  sqlQuery.value = sql;
-}
-
-function loadDatabaseObjects(dbType: string, dbName: string) {
-  // 在实际应用中，这里将从服务器加载数据库对象
-  // 这里只是简单模拟不同类型的数据库对象
-  switch (dbType) {
-    case 'mysql':
-      databaseObjects.value = {
-        tables: ['users', 'products', 'orders', 'order_items'],
-        views: ['active_users', 'product_inventory'],
-        procedures: ['get_user_orders', 'update_inventory']
-      };
-      break;
-    case 'postgresql':
-      databaseObjects.value = {
-        tables: ['users', 'categories', 'items', 'transactions'],
-        views: ['user_stats', 'item_inventory'],
-        procedures: ['refresh_stats', 'cleanup_old_data']
-      };
-      break;
-    case 'sqlite':
-      databaseObjects.value = {
-        tables: ['users', 'settings', 'logs'],
-        views: ['active_users'],
-        procedures: []
-      };
-      break;
-    default:
-      databaseObjects.value = {
-        tables: [],
-        views: [],
-        procedures: []
-      };
-  }
-}
-
-// 新建查询
-function newQuery() {
-  sqlQuery.value = '';
-  queryExecuted.value = false;
-  
-  // 创建新的标签页
-  const tabCount = tabs.value.length + 1;
-  const newTabName = `query${tabCount}`;
-  
-  tabs.value.push({
-    title: `查询 ${tabCount}`,
-    name: newTabName,
-    content: ''
-  });
-  
-  // 激活新标签页
-  activeTab.value = newTabName;
-}
-
-// 保存查询
-function saveQuery() {
-  if (!connection.value) return;
-  
-  // 先创建一个历史记录
-  const queryItem = queryHistoryService.addQueryToHistory(
-    connection.value.id,
-    selectedDatabase.value,
-    sqlQuery.value,
-    0, // 未执行，设置为0毫秒
-    0  // 未执行，设置为0行
-  );
-  
-  // 设置名称、标签和收藏状态
-  if (saveQueryForm.name) {
-    queryHistoryService.setQueryName(queryItem.id, saveQueryForm.name);
-  }
-  
-  if (saveQueryForm.tags.length > 0) {
-    saveQueryForm.tags.forEach(tag => {
-      queryHistoryService.addTagToQuery(queryItem.id, tag);
-    });
-  }
-  
-  if (saveQueryForm.asFavorite) {
-    queryHistoryService.setQueryFavorite(queryItem.id, true);
-  }
-  
-  // 关闭对话框并重置表单
-  showSaveQueryDialog.value = false;
-  saveQueryForm.name = '';
-  saveQueryForm.tags = [];
-  saveQueryForm.asFavorite = true;
-  
-  ElMessage.success('查询已保存');
+  return formatted;
 }
 
 // 格式化SQL
 function formatSql() {
-  // 使用SqlEditor组件的格式化方法
-  sqlEditorRef.value?.formatSql();
+  try {
+    const formatted = formatSqlQuery(sqlQuery.value, {
+      indent: 2,
+      uppercase: true,
+      linesBetweenQueries: 2
+    })
+    
+    sqlQuery.value = formatted
+    ElMessage.success('SQL格式化成功')
+  } catch (error) {
+    console.error('格式化失败:', error)
+    ElMessage.error('SQL格式化失败')
+  }
+}
+
+// 保存查询
+function saveQuery() {
+  if (!saveQueryForm.value.name) {
+    ElMessage.warning('请输入查询名称')
+    return
+  }
   
-  ElMessage.success('SQL 已格式化');
+  try {
+    const query = {
+      id: Date.now(),
+      name: saveQueryForm.value.name,
+      sql: sqlQuery.value,
+      tags: saveQueryForm.value.tags,
+      isFavorite: saveQueryForm.value.asFavorite,
+      createdAt: new Date().toISOString(),
+      connectionId: connectionId.value
+    }
+    
+    // 保存到本地存储
+    const savedQueries = JSON.parse(localStorage.getItem('saved_queries') || '[]')
+    savedQueries.push(query)
+    localStorage.setItem('saved_queries', JSON.stringify(savedQueries))
+    
+    showSaveQueryDialog.value = false
+    ElMessage.success('查询已保存')
+    
+    // 重置表单
+    saveQueryForm.value = {
+      name: '',
+      tags: [],
+      asFavorite: false
+    }
+  } catch (error) {
+    console.error('保存查询失败:', error)
+    ElMessage.error('保存查询失败')
+  }
+}
+
+// 加载保存的查询
+function loadSavedQuery(query: any) {
+  sqlQuery.value = query.sql
 }
 
 // 导出查询结果
 function exportQueryResults(format: string) {
-  if (!queryResults.value.length || !resultColumns.value.length) {
-    ElMessage.warning('没有可导出的查询结果');
-    return;
+  if (!queryResults.value.length) {
+    ElMessage.warning('没有结果可导出')
+    return
   }
   
-  let content = '';
-  let mimeType = '';
-  let fileName = `query-result-${new Date().toISOString().slice(0, 10)}`;
-  
-  switch (format) {
-    case 'csv':
-      // 处理CSV导出
-      // 添加列头
-      content = resultColumns.value.join(',') + '\n';
+  try {
+    let content = ''
+    const fileName = `query-export-${new Date().getTime()}`
+    
+    if (format === 'csv') {
+      // 导出CSV
+      const header = resultColumns.value.join(',')
+      const rows = queryResults.value.map(row => {
+        return resultColumns.value.map(col => {
+          // 转义CSV中的特殊字符
+          const value = row[col]
+          if (value === null || value === undefined) return ''
+          const strValue = String(value)
+          return strValue.includes(',') ? `"${strValue.replace(/"/g, '""')}"` : strValue
+        }).join(',')
+      })
       
-      // 添加数据行
-      queryResults.value.forEach(row => {
-        const rowData = resultColumns.value.map(col => {
-          const value = row[col];
-          // 处理CSV中的特殊字符（逗号、引号、换行符）
-          if (value === null || value === undefined) return '';
-          const str = String(value);
-          if (str.includes(',') || str.includes('"') || str.includes('\n')) {
-            return `"${str.replace(/"/g, '""')}"`;
-          }
-          return str;
-        });
-        content += rowData.join(',') + '\n';
-      });
-      
-      mimeType = 'text/csv';
-      fileName += '.csv';
-      break;
-      
-    case 'json':
-      // 处理JSON导出
-      content = JSON.stringify(queryResults.value, null, 2);
-      mimeType = 'application/json';
-      fileName += '.json';
-      break;
-      
-    case 'sql':
-      // 处理SQL INSERT导出
-      if (!connection.value) return;
-      
-      // 使用从查询中推断的表名，或者使用默认名称
-      let tableName = 'table_name';
-      const fromMatch = sqlQuery.value.match(/FROM\s+([^\s,;()]+)/i);
-      if (fromMatch && fromMatch[1]) {
-        tableName = fromMatch[1].trim();
+      content = [header, ...rows].join('\n')
+      downloadFile(`${fileName}.csv`, content, 'text/csv')
+    } 
+    else if (format === 'json') {
+      // 导出JSON
+      content = JSON.stringify(queryResults.value, null, 2)
+      downloadFile(`${fileName}.json`, content, 'application/json')
+    } 
+    else if (format === 'sql') {
+      // 导出SQL INSERT语句
+      if (!databaseObjects.value.tables.length) {
+        ElMessage.warning('无法确定表名，无法导出INSERT语句')
+        return
       }
       
-      // 生成INSERT语句
-      content = `-- 生成的SQL INSERT语句\n`;
-      content += `-- 数据库: ${connection.value.database}\n`;
-      content += `-- 日期: ${new Date().toLocaleString()}\n\n`;
+      // 从查询中提取表名
+      const tableMatch = sqlQuery.value.match(/FROM\s+([^\s,;()]+)/i)
+      const tableName = tableMatch ? tableMatch[1] : 'table_name'
       
-      queryResults.value.forEach(row => {
-        const columns = resultColumns.value.join(', ');
+      content = queryResults.value.map(row => {
+        const columns = resultColumns.value.join(', ')
         const values = resultColumns.value.map(col => {
-          const value = row[col];
-          if (value === null || value === undefined) return 'NULL';
-          if (typeof value === 'string') return `'${value.replace(/'/g, "''")}'`;
-          return value;
-        }).join(', ');
+          const value = row[col]
+          if (value === null || value === undefined) return 'NULL'
+          if (typeof value === 'string') return `'${value.replace(/'/g, "''")}'`
+          return value
+        }).join(', ')
         
-        content += `INSERT INTO ${tableName} (${columns}) VALUES (${values});\n`;
-      });
+        return `INSERT INTO ${tableName} (${columns}) VALUES (${values});`
+      }).join('\n')
       
-      mimeType = 'text/plain';
-      fileName += '.sql';
-      break;
-  }
-  
-  // 创建下载链接
-  const blob = new Blob([content], { type: mimeType });
-  const url = URL.createObjectURL(blob);
-  
-  // 创建并触发下载链接
-  const link = document.createElement('a');
-  link.href = url;
-  link.download = fileName;
-  document.body.appendChild(link);
-  link.click();
-  
-  // 清理
-  document.body.removeChild(link);
-  URL.revokeObjectURL(url);
-  
-  ElMessage.success(`查询结果已导出为 ${format.toUpperCase()} 格式`);
-}
-
-// 加载表的列信息
-function loadTableColumns(tableName: string) {
-  // 在实际应用中，这里会从数据库加载列信息
-  // 这里模拟一些列数据
-  if (!tableColumns.value[tableName]) {
-    // 为不同的表生成模拟列
-    if (tableName === 'users') {
-      tableColumns.value[tableName] = [
-        'id', 'username', 'email', 'password', 'created_at', 'updated_at', 'status'
-      ];
-    } else if (tableName === 'products') {
-      tableColumns.value[tableName] = [
-        'id', 'name', 'description', 'price', 'stock', 'category_id', 'created_at'
-      ];
-    } else if (tableName === 'orders') {
-      tableColumns.value[tableName] = [
-        'id', 'user_id', 'total_amount', 'status', 'created_at', 'shipping_address'
-      ];
-    } else if (tableName === 'order_items') {
-      tableColumns.value[tableName] = [
-        'id', 'order_id', 'product_id', 'quantity', 'unit_price'
-      ];
-    } else {
-      // 默认列
-      tableColumns.value[tableName] = ['id', 'name', 'created_at'];
+      downloadFile(`${fileName}.sql`, content, 'text/plain')
     }
+    
+    ElMessage.success(`导出${format.toUpperCase()}成功`)
+  } catch (error) {
+    console.error('导出失败:', error)
+    ElMessage.error('导出失败')
   }
 }
 
-onMounted(() => {
-  // 从本地存储加载连接信息
-  const loadedConnection = storageService.getConnection(connectionId.value);
-  
-  if (loadedConnection) {
-    connection.value = loadedConnection;
-    selectedDatabase.value = loadedConnection.database;
-    
-    // 加载该类型数据库的对象结构
-    loadDatabaseObjects(loadedConnection.type, loadedConnection.database);
-    
-    // 加载表的列信息
-    databaseObjects.value.tables.forEach(table => {
-      loadTableColumns(table);
-    });
-    
-    console.log(`已连接到 ${loadedConnection.name} (${loadedConnection.type})`);
-    
-    // 检查URL参数是否带有SQL查询
-    const sql = route.query.sql;
-    if (sql && typeof sql === 'string') {
-      sqlQuery.value = decodeURIComponent(sql);
-      
-      // 如果带有edit参数，则不自动执行查询
-      if (!route.query.edit) {
-        // 自动执行查询
-        executeQuery();
-      }
-    }
-  } else {
-    // 找不到连接信息，返回连接列表页面
-    ElMessage.error('无法找到连接信息，请重新选择连接');
-    router.push('/connections');
-  }
-});
+// 下载文件
+function downloadFile(fileName: string, content: string, contentType: string) {
+  const blob = new Blob([content], { type: contentType })
+  const url = URL.createObjectURL(blob)
+  const a = document.createElement('a')
+  a.href = url
+  a.download = fileName
+  a.click()
+  URL.revokeObjectURL(url)
+}
 </script>
 
 <style scoped>
