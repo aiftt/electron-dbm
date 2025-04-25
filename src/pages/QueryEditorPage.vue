@@ -253,6 +253,7 @@ import { storageService } from '../utils/storage'
 import CodeMirrorEditor from '../components/CodeMirrorEditor.vue'
 import FavoriteQueries from '../components/FavoriteQueries.vue'
 import QueryBuilder from '../components/QueryBuilder.vue'
+import { formatSqlQuery } from '../utils/sql-formatter'
 
 // 页面状态
 const route = useRoute()
@@ -551,35 +552,9 @@ async function executeQuery(fromUrl = false) {
 }
 
 // Format SQL function
-function formatSqlQuery(sql: string, options: { indent?: number; uppercase?: boolean; linesBetweenQueries?: number } = {}): string {
-  // Default options
-  const indent = options.indent ?? 2;
-  const uppercase = options.uppercase ?? true;
-  
-  // Simple implementation for temporary use
-  let formatted = sql;
-  
-  // Convert keywords to uppercase if requested
-  if (uppercase) {
-    const keywords = ['SELECT', 'FROM', 'WHERE', 'ORDER BY', 'GROUP BY', 'HAVING', 'JOIN'];
-    keywords.forEach(keyword => {
-      const regex = new RegExp(`\\b${keyword.replace(/ /g, '\\s+')}\\b`, 'gi');
-      formatted = formatted.replace(regex, keyword);
-    });
-  }
-  
-  // Add line breaks and indentation
-  formatted = formatted
-    .replace(/\s*SELECT\s+/gi, '\nSELECT ')
-    .replace(/\s*FROM\s+/gi, '\nFROM ')
-    .replace(/\s*WHERE\s+/gi, '\nWHERE ')
-    .replace(/\s*(?:AND|OR)\s+/gi, '\n  $& ')
-    .replace(/\s*GROUP BY\s+/gi, '\nGROUP BY ')
-    .replace(/\s*ORDER BY\s+/gi, '\nORDER BY ')
-    .replace(/\s*HAVING\s+/gi, '\nHAVING ');
-  
-  return formatted;
-}
+// function formatSqlQuery(sql: string, options: { indent?: number; uppercase?: boolean; linesBetweenQueries?: number } = {}): string {
+//   // Implementation removed as we're now importing it
+// }
 
 // 格式化SQL
 function formatSql() {

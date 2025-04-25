@@ -47,12 +47,12 @@ interface TreeNode {
 }
 
 const props = defineProps<{
-  connection: DbConnection | null;
-  active: boolean;
+  connectionId: number;
+  selectedDatabase?: string;
 }>();
 
 const emit = defineEmits<{
-  (e: 'select', objectId: string, objectType: string, objectName: string): void;
+  (e: 'object-selected', name: string, type: string): void;
 }>();
 
 const loading = ref(false);
@@ -65,24 +65,18 @@ const defaultProps = {
 };
 
 const handleNodeClick = (data: TreeNode) => {
-  // 只处理叶子节点点击
-  if (!data.children || data.children.length === 0) {
-    emit('select', data.id, data.type, data.name);
+  if (['table', 'view', 'procedure', 'function'].includes(data.type)) {
+    emit('object-selected', data.name, data.type);
   }
 };
 
 const fetchDatabaseObjects = async () => {
-  if (!props.connection) {
-    objectTree.value = [];
-    return;
-  }
-
   loading.value = true;
   error.value = null;
 
   try {
     // 获取数据库对象列表
-    const objects = await databaseService.getDatabaseObjects(props.connection.id);
+    const objects = await databaseService.getDatabaseObjects(props.connectionId);
     
     // 构建树形结构
     const tables: TreeNode[] = [];
@@ -124,33 +118,26 @@ const fetchDatabaseObjects = async () => {
         type: 'folder',
         icon: 'mdi:eye',
         children: views.sort((a, b) => a.name.localeCompare(b.name))
-      }
-    ];
-    
-    // 如果有存储过程或函数，添加到树中
-    if (procedures.length > 0) {
-      objectTree.value.push({
+      },
+      {
         id: 'procedures',
         name: '存储过程',
         type: 'folder',
         icon: 'mdi:function',
         children: procedures.sort((a, b) => a.name.localeCompare(b.name))
-      });
-    }
-    
-    if (functions.length > 0) {
-      objectTree.value.push({
+      },
+      {
         id: 'functions',
         name: '函数',
         type: 'folder',
         icon: 'mdi:function-variant',
         children: functions.sort((a, b) => a.name.localeCompare(b.name))
-      });
-    }
+      }
+    ];
     
-  } catch (err) {
+  } catch (err: any) {
     console.error('获取数据库对象失败:', err);
-    error.value = err instanceof Error ? err.message : '获取数据库对象失败';
+    error.value = err.message || '获取数据库对象失败';
     objectTree.value = [];
   } finally {
     loading.value = false;
@@ -168,7 +155,7 @@ function getObjectIcon(type: string): string {
   }
 }
 
-watch(() => props.connection, (newVal) => {
+watch(() => props.connectionId, (newVal) => {
   if (newVal) {
     fetchDatabaseObjects();
   } else {
@@ -176,15 +163,8 @@ watch(() => props.connection, (newVal) => {
   }
 });
 
-watch(() => props.active, (newVal) => {
-  // 当组件变为激活状态且有连接信息时重新获取数据
-  if (newVal && props.connection) {
-    fetchDatabaseObjects();
-  }
-});
-
 onMounted(() => {
-  if (props.connection && props.active) {
+  if (props.connectionId) {
     fetchDatabaseObjects();
   }
 });

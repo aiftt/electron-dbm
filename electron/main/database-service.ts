@@ -3,40 +3,41 @@
  * 处理数据库连接和查询操作
  */
 
-import { ipcMain } from 'electron';
-import mysql from 'mysql2/promise';
-import { Client as PgClient } from 'pg';
-import BetterSqlite3 from 'better-sqlite3';
-import path from 'path';
-import fs from 'fs';
-import { app } from 'electron';
+const { ipcMain, app } = require('electron');
+const mysql = require('mysql2/promise');
+const { Client: PgClient } = require('pg');
+const BetterSqlite3 = require('better-sqlite3');
+const path = require('path');
+const fs = require('fs');
 
 // 数据库连接配置接口
-interface DbConnection {
-  id: number;
-  name: string;
-  type: string;
-  host?: string;
-  port?: number;
-  username?: string;
-  password?: string;
-  database?: string;
-  filename?: string;
-  useSSL?: boolean;
-  group?: string;
-}
+/**
+ * @typedef {Object} DbConnection
+ * @property {number} id
+ * @property {string} name
+ * @property {string} type
+ * @property {string} [host]
+ * @property {number} [port]
+ * @property {string} [username]
+ * @property {string} [password]
+ * @property {string} [database]
+ * @property {string} [filename]
+ * @property {boolean} [useSSL]
+ * @property {string} [group]
+ */
 
 // 活动连接管理
-interface ActiveConnection {
-  mysql?: mysql.Connection;
-  postgresql?: PgClient;
-  sqlite?: BetterSqlite3.Database;
-  config: DbConnection;
-  timestamp: number;
-}
+/**
+ * @typedef {Object} ActiveConnection
+ * @property {Object} [mysql]
+ * @property {Object} [postgresql]
+ * @property {Object} [sqlite]
+ * @property {DbConnection} config
+ * @property {number} timestamp
+ */
 
 // 活动连接缓存
-const activeConnections: Map<number, ActiveConnection> = new Map();
+const activeConnections = new Map();
 
 // 连接超时时间 (30分钟)
 const CONNECTION_TIMEOUT = 30 * 60 * 1000;
@@ -44,12 +45,12 @@ const CONNECTION_TIMEOUT = 30 * 60 * 1000;
 /**
  * 初始化数据库服务
  */
-export function initDatabaseService() {
+function initDatabaseService() {
   // 定期清理非活动连接
   setInterval(() => cleanupInactiveConnections(), 5 * 60 * 1000);
 
   // 测试数据库连接
-  ipcMain.handle('db:test-connection', async (_, connection: DbConnection) => {
+  ipcMain.handle('db:test-connection', async (_, connection) => {
     try {
       return await testConnection(connection);
     } catch (error) {
@@ -62,7 +63,7 @@ export function initDatabaseService() {
   });
 
   // 连接到数据库
-  ipcMain.handle('db:connect', async (_, connection: DbConnection) => {
+  ipcMain.handle('db:connect', async (_, connection) => {
     try {
       // 先尝试关闭可能存在的连接
       await closeConnection(connection.id);
@@ -87,7 +88,7 @@ export function initDatabaseService() {
   });
 
   // 断开数据库连接
-  ipcMain.handle('db:disconnect', async (_, connectionId: number) => {
+  ipcMain.handle('db:disconnect', async (_, connectionId) => {
     try {
       await closeConnection(connectionId);
       return { success: true };
@@ -169,7 +170,7 @@ export function initDatabaseService() {
 /**
  * 清理不活动的连接
  */
-function cleanupInactiveConnections(): void {
+function cleanupInactiveConnections() {
   const now = Date.now();
   // 修复 Map 迭代语法
   Array.from(activeConnections.entries()).forEach(([id, conn]) => {
@@ -184,7 +185,7 @@ function cleanupInactiveConnections(): void {
 /**
  * 关闭特定连接
  */
-async function closeConnection(connectionId: number): Promise<void> {
+async function closeConnection(connectionId) {
   const conn = activeConnections.get(connectionId);
   if (!conn) return;
 
@@ -209,7 +210,7 @@ async function closeConnection(connectionId: number): Promise<void> {
 /**
  * 测试数据库连接
  */
-async function testConnection(connection: DbConnection): Promise<{ success: boolean; message: string }> {
+async function testConnection(connection) {
   try {
     validateConnectionConfig(connection);
     
@@ -239,7 +240,7 @@ async function testConnection(connection: DbConnection): Promise<{ success: bool
 /**
  * 验证连接配置
  */
-function validateConnectionConfig(connection: DbConnection): void {
+function validateConnectionConfig(connection) {
   if (!connection.name) {
     throw new Error('连接名称不能为空');
   }
@@ -270,8 +271,8 @@ function validateConnectionConfig(connection: DbConnection): void {
 /**
  * 测试 MySQL 连接
  */
-async function testMySqlConnection(connection: DbConnection): Promise<{ success: boolean; message: string }> {
-  let conn: mysql.Connection | null = null;
+async function testMySqlConnection(connection) {
+  let conn = null;
   
   try {
     conn = await mysql.createConnection({
@@ -304,7 +305,7 @@ async function testMySqlConnection(connection: DbConnection): Promise<{ success:
 /**
  * 测试 PostgreSQL 连接
  */
-async function testPostgresConnection(connection: DbConnection): Promise<{ success: boolean; message: string }> {
+async function testPostgresConnection(connection) {
   const client = new PgClient({
     host: connection.host,
     port: connection.port,
@@ -335,8 +336,8 @@ async function testPostgresConnection(connection: DbConnection): Promise<{ succe
 /**
  * 测试 SQLite 连接
  */
-async function testSqliteConnection(connection: DbConnection): Promise<{ success: boolean; message: string }> {
-  let db: BetterSqlite3.Database | null = null;
+async function testSqliteConnection(connection) {
+  let db = null;
   
   try {
     const dbPath = getSqliteDatabasePath(connection.filename || '');
@@ -370,7 +371,7 @@ async function testSqliteConnection(connection: DbConnection): Promise<{ success
 /**
  * 获取SQLite数据库文件的绝对路径
  */
-function getSqliteDatabasePath(databasePath: string): string {
+function getSqliteDatabasePath(databasePath) {
   if (path.isAbsolute(databasePath)) {
     return databasePath;
   }
@@ -383,11 +384,11 @@ function getSqliteDatabasePath(databasePath: string): string {
 /**
  * 创建数据库连接
  */
-async function createConnection(connection: DbConnection): Promise<void> {
+async function createConnection(connection) {
   // 关闭可能存在的旧连接
   await closeConnection(connection.id);
   
-  const newConnection: ActiveConnection = {
+  const newConnection = {
     config: connection,
     timestamp: Date.now()
   };
@@ -445,15 +446,15 @@ async function createConnection(connection: DbConnection): Promise<void> {
  * 获取数据库对象列表
  */
 async function getDatabaseObjects(
-  connectionId: number,
-  type?: 'table' | 'view' | 'procedure' | 'function'
-): Promise<Array<{ name: string; type: 'table' | 'view' | 'procedure' | 'function'; schema?: string }>> {
+  connectionId,
+  type = 'table'
+) {
   const conn = activeConnections.get(connectionId);
   if (!conn) {
     throw new Error(`找不到ID为 ${connectionId} 的连接`);
   }
   
-  const objects: Array<{ name: string; type: 'table' | 'view' | 'procedure' | 'function'; schema?: string }> = [];
+  const objects = [];
   
   try {
     switch (conn.config.type) {
@@ -600,30 +601,16 @@ async function getDatabaseObjects(
  * 获取表列信息
  */
 async function getTableColumns(
-  connectionId: number,
-  table: string,
-  schema?: string
-): Promise<Array<{
-  name: string;
-  type: string;
-  nullable: boolean;
-  isPrimary: boolean;
-  defaultValue?: string;
-  comment?: string;
-}>> {
+  connectionId,
+  table,
+  schema = 'public'
+) {
   const conn = activeConnections.get(connectionId);
   if (!conn) {
     throw new Error(`找不到ID为 ${connectionId} 的连接`);
   }
   
-  const columns: Array<{
-    name: string;
-    type: string;
-    nullable: boolean;
-    isPrimary: boolean;
-    defaultValue?: string;
-    comment?: string;
-  }> = [];
+  const columns = [];
   
   try {
     switch (conn.config.type) {
@@ -728,15 +715,10 @@ async function getTableColumns(
  * 执行SQL查询
  */
 async function executeQuery(
-  connectionId: number,
-  sql: string,
-  params: any[] = []
-): Promise<{
-  columns?: string[];
-  rows?: any[];
-  affectedRows?: number;
-  error?: string;
-}> {
+  connectionId,
+  sql,
+  params = []
+) {
   const conn = activeConnections.get(connectionId);
   if (!conn) {
     return { error: `找不到ID为 ${connectionId} 的连接` };
@@ -823,10 +805,10 @@ async function executeQuery(
  * 获取存储过程定义
  */
 async function getProcedureDefinition(
-  connectionId: number,
-  procedure: string,
-  schema?: string
-): Promise<string> {
+  connectionId,
+  procedure,
+  schema = 'public'
+) {
   const conn = activeConnections.get(connectionId);
   if (!conn) {
     throw new Error(`找不到ID为 ${connectionId} 的连接`);
@@ -878,7 +860,7 @@ async function getProcedureDefinition(
 /**
  * 获取数据库列表
  */
-async function getDatabases(connectionId: number): Promise<string[]> {
+async function getDatabases(connectionId) {
   const conn = activeConnections.get(connectionId);
   if (!conn) {
     throw new Error(`找不到ID为 ${connectionId} 的连接`);
@@ -923,9 +905,9 @@ async function getDatabases(connectionId: number): Promise<string[]> {
  * 切换数据库
  */
 async function changeDatabase(
-  connectionId: number,
-  database: string
-): Promise<{ success: boolean; message?: string }> {
+  connectionId,
+  database
+) {
   const conn = activeConnections.get(connectionId);
   if (!conn) {
     return { success: false, message: `找不到ID为 ${connectionId} 的连接` };
@@ -992,4 +974,9 @@ async function changeDatabase(
       message: error instanceof Error ? error.message : String(error)
     };
   }
-} 
+}
+
+// 导出函数
+module.exports = {
+  initDatabaseService
+}; 

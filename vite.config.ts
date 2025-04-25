@@ -1,8 +1,11 @@
+import type { PluginOption } from 'vite';
 import { defineConfig } from 'vite';
 import vue from '@vitejs/plugin-vue';
 import electron from 'vite-plugin-electron';
 import renderer from 'vite-plugin-electron-renderer';
-import { join, resolve } from 'path';
+import { notBundle } from 'vite-plugin-electron/plugin';
+import { rmSync } from 'node:fs';
+import path from 'node:path';
 
 // https://vitejs.dev/config/
 export default defineConfig({
@@ -12,9 +15,6 @@ export default defineConfig({
       {
         // Main process entry file
         entry: 'electron/main/index.ts',
-        onstart: (options) => {
-          options.startup();
-        },
         vite: {
           build: {
             outDir: 'dist-electron/main',
@@ -24,7 +24,22 @@ export default defineConfig({
                 format: 'cjs'
               }
             },
+            minify: false,
+            commonjsOptions: {
+              ignoreDynamicRequires: true,
+            },
+            lib: {
+              entry: 'electron/main/index.ts',
+              formats: ['cjs'],
+            },
           },
+        },
+        onstart({ startup }) {
+          if (process.env.VSCODE_DEBUG) {
+            console.log('[startup] Electron App');
+          } else {
+            startup();
+          }
         },
       },
       {
@@ -55,7 +70,7 @@ export default defineConfig({
   ],
   resolve: {
     alias: {
-      '@': resolve(__dirname, 'src'),
+      '@': path.resolve(__dirname, 'src'),
     },
   },
   server: {

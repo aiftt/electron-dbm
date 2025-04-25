@@ -1,6 +1,6 @@
-import { app } from 'electron';
-import { spawn } from 'child_process';
-import { join } from 'path';
+import { app as electronApp } from 'electron';
+import { spawn as childProcess } from 'node:child_process';
+import { join as pathJoin } from 'node:path';
 
 /**
  * Updates the application with electron-updater

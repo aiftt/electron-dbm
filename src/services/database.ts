@@ -3,9 +3,11 @@
  * 处理数据库连接和查询操作
  */
 
-import { ipcRenderer } from 'electron';
 import { ref } from 'vue';
 import { ElMessage } from 'element-plus';
+
+// 使用预加载脚本暴露的API
+const { invoke } = window.electronAPI;
 
 export interface DbConnection {
   id: number;
@@ -79,7 +81,7 @@ export const connectionError = ref<string | null>(null);
  */
 export async function testConnection(connection: DbConnection): Promise<ConnectionTestResult> {
   try {
-    const result = await ipcRenderer.invoke('db:test-connection', connection);
+    const result = await invoke('db:test-connection', connection);
     return result;
   } catch (error) {
     console.error('测试连接失败:', error);
@@ -100,7 +102,7 @@ export async function connectToDatabase(connection: DbConnection): Promise<boole
     connectionStatus.value = 'connecting';
     connectionError.value = null;
     
-    const result = await ipcRenderer.invoke('db:connect', connection);
+    const result = await invoke('db:connect', connection);
     
     if (result.success) {
       currentConnection.value = connection;
@@ -126,7 +128,7 @@ export async function connectToDatabase(connection: DbConnection): Promise<boole
 export async function disconnectDatabase(): Promise<void> {
   if (currentConnection.value) {
     try {
-      await ipcRenderer.invoke('db:disconnect', currentConnection.value.id);
+      await invoke('db:disconnect', currentConnection.value.id);
       currentConnection.value = null;
       connectionStatus.value = 'disconnected';
     } catch (error) {
@@ -149,7 +151,7 @@ export async function getDatabaseObjects(
   type?: DbObjectType
 ): Promise<DbObject[]> {
   try {
-    const objects = await ipcRenderer.invoke('db:get-objects', {
+    const objects = await invoke('db:get-objects', {
       connectionId,
       type
     });
@@ -174,7 +176,7 @@ export async function getTableColumns(
   schema?: string
 ): Promise<TableColumn[]> {
   try {
-    const columns = await ipcRenderer.invoke('db:get-table-columns', {
+    const columns = await invoke('db:get-table-columns', {
       connectionId,
       table,
       schema
@@ -202,7 +204,7 @@ export async function executeQuery(
   const startTime = performance.now();
   
   try {
-    const result = await ipcRenderer.invoke('db:execute-query', {
+    const result = await invoke('db:execute-query', {
       connectionId,
       sql,
       params: params || []
@@ -251,7 +253,7 @@ export async function getProcedureDefinition(
   schema?: string
 ): Promise<string> {
   try {
-    const definition = await ipcRenderer.invoke('db:get-procedure-definition', {
+    const definition = await invoke('db:get-procedure-definition', {
       connectionId,
       procedure,
       schema
@@ -271,7 +273,7 @@ export async function getProcedureDefinition(
  */
 export async function getDatabases(connectionId: number): Promise<string[]> {
   try {
-    const databases = await ipcRenderer.invoke('db:get-databases', {
+    const databases = await invoke('db:get-databases', {
       connectionId
     });
     return databases;
@@ -293,7 +295,7 @@ export async function changeDatabase(
   database: string
 ): Promise<boolean> {
   try {
-    const result = await ipcRenderer.invoke('db:change-database', {
+    const result = await invoke('db:change-database', {
       connectionId,
       database
     });
