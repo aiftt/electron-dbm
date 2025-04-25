@@ -66,8 +66,8 @@
         <div class="mt-4 flex flex-wrap items-center gap-2">
           <div>
             <el-radio-group v-model="filters.type" size="small">
-              <el-radio-button label="all">全部</el-radio-button>
-              <el-radio-button label="favorites">收藏</el-radio-button>
+              <el-radio-button value="all">全部</el-radio-button>
+              <el-radio-button value="favorites">收藏</el-radio-button>
             </el-radio-group>
           </div>
           

@@ -1,12 +1,9 @@
-import { app, BrowserWindow, shell, ipcMain } from 'electron';
-import { release } from 'node:os';
-import { join, dirname } from 'node:path';
-import { fileURLToPath } from 'node:url';
-// import { update } from './update';
+const { app, BrowserWindow, shell, ipcMain } = require('electron');
+const { release } = require('node:os');
+const { join } = require('node:path');
+// const { update } = require('./update');
 
-// Get the directory name of the current module in ESM
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = dirname(__filename);
+// CommonJS中已经定义了__dirname，不需要重新定义
 
 // Disable GPU Acceleration for Windows 7
 if (release().startsWith('6.1')) app.disableHardwareAcceleration();
@@ -26,7 +23,7 @@ if (!app.requestSingleInstanceLock()) {
 process.env['ELECTRON_DISABLE_SECURITY_WARNINGS'] = 'true';
 
 // Global reference to mainWindow to avoid it being garbage collected
-let mainWindow: BrowserWindow | null = null;
+let mainWindow = null;
 
 // Here, we load the app URL
 const VITE_DEV_SERVER_URL = process.env['VITE_DEV_SERVER_URL'];
@@ -43,6 +40,7 @@ async function createWindow() {
       preload: join(__dirname, '../preload/index.js'),
       nodeIntegration: false,
       contextIsolation: true,
+      sandbox: false,
     },
   });
 

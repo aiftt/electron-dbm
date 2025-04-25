@@ -259,7 +259,7 @@
           <el-radio 
             v-for="group in connectionGroups" 
             :key="group.id" 
-            :label="group.id"
+            :value="group.id"
             border
           >
             <div class="flex items-center">

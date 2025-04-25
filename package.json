@@ -3,10 +3,9 @@
   "version": "1.0.0",
   "description": "A Navicat-like database management client built with Electron and Vue 3",
   "main": "dist-electron/main/index.js",
-  "type": "module",
   "scripts": {
     "dev": "vite",
-    "devx": "node electron.mjs",
+    "devx": "node electron.cjs",
     "build": "vue-tsc --noEmit && vite build && electron-builder",
     "preview": "vite preview",
     "lint": "eslint . --ext .vue,.js,.jsx,.cjs,.mjs,.ts,.tsx,.cts,.mts --fix"
@@ -21,14 +20,19 @@
   "author": "aiftt",
   "license": "ISC",
   "dependencies": {
+    "@codemirror/lang-sql": "^6.8.0",
+    "@codemirror/theme-one-dark": "^6.1.2",
     "@iconify/vue": "^4.3.0",
     "@types/crypto-js": "^4.2.2",
+    "ace-builds": "^1.24.1",
+    "codemirror": "^6.0.1",
     "crypto-js": "^4.2.0",
     "element-plus": "^2.4.4",
     "monaco-editor": "^0.52.2",
     "pinia": "^2.1.7",
-    "sql-formatter": "^15.0.2",
+    "sql-formatter": "^15.6.0",
     "vue": "^3.5.13",
+    "vue-codemirror": "^6.1.1",
     "vue-router": "^4.2.5"
   },
   "devDependencies": {

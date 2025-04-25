@@ -119,9 +119,9 @@
                     <div class="mb-2">
                       <div class="text-sm mb-1">缩进:</div>
                       <el-radio-group v-model="formatOptions.indentSize" size="small">
-                        <el-radio-button :label="2">2空格</el-radio-button>
-                        <el-radio-button :label="4">4空格</el-radio-button>
-                        <el-radio-button :label="0">Tab</el-radio-button>
+                        <el-radio-button link :value="2">2空格</el-radio-button>
+                        <el-radio-button link :value="4">4空格</el-radio-button>
+                        <el-radio-button link :value="0">Tab</el-radio-button>
                       </el-radio-group>
                     </div>
                   </div>
@@ -142,12 +142,10 @@
           
           <!-- 这在实际应用中会是一个代码编辑器，如 Monaco -->
           <div class="flex-1 overflow-hidden">
-            <SqlEditor
+            <CodeMirrorEditor
               v-model="sqlQuery"
               height="100%"
-              :theme="isDarkMode ? 'vs-dark' : 'vs'"
-              :database-tables="databaseObjects.tables"
-              :database-columns="tableColumns"
+              :theme="isDarkMode ? 'dark' : 'light'"
               @execute-query="executeQuery"
               ref="sqlEditorRef"
             />
@@ -253,12 +251,18 @@ import { type DbConnection } from '../services/database';
 import { queryHistoryService } from '../services/query-history';
 import { sqlFormatter } from '../services/sql-formatter';
 import FavoriteQueries from '../components/FavoriteQueries.vue';
-import SqlEditor from '../components/SqlEditor.vue';
+import CodeMirrorEditor from '../components/CodeMirrorEditor.vue';
 import QueryBuilder from '../components/QueryBuilder.vue';
+
+// 定义props以接收connectionId
+const props = defineProps<{
+  connectionId?: string | number
+}>();
 
 const route = useRoute();
 const router = useRouter();
-const connectionId = computed(() => Number(route.params.connectionId));
+// 优先使用props传入的connectionId，如果没有则从路由参数获取
+const connectionId = computed(() => props.connectionId ? Number(props.connectionId) : Number(route.params.connectionId));
 
 // 连接数据
 const connection = ref<DbConnection | null>(null);
@@ -302,7 +306,7 @@ const formatOptions = reactive({
 });
 
 // SQL编辑器引用
-const sqlEditorRef = ref<InstanceType<typeof SqlEditor> | null>(null);
+const sqlEditorRef = ref<InstanceType<typeof CodeMirrorEditor> | null>(null);
 
 // 表的列信息
 const tableColumns = ref<Record<string, string[]>>({});

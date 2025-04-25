@@ -45,6 +45,18 @@
             <p class="text-sm text-gray-500 dark:text-gray-400">导入和导出数据库数据</p>
           </div>
         </div>
+        
+        <!-- CodeMirror Demo Link -->
+        <div class="card p-4 flex items-center space-x-3 cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-700"
+             @click="$router.push('/codemirror-demo')">
+          <div class="w-10 h-10 rounded-full bg-amber-100 flex items-center justify-center text-amber-600">
+            <Icon icon="mdi:code-json" width="24" />
+          </div>
+          <div>
+            <h3 class="font-medium">CodeMirror 演示</h3>
+            <p class="text-sm text-gray-500 dark:text-gray-400">演示 CodeMirror SQL 编辑器</p>
+          </div>
+        </div>
       </div>
       
       <div class="mt-6 p-4 bg-gray-50 dark:bg-gray-700 rounded-lg">

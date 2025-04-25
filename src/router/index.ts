@@ -28,6 +28,11 @@ const routes: RouteRecordRaw[] = [
         component: () => import('../pages/TableViewPage.vue'),
         props: true,
       },
+      {
+        path: 'codemirror-demo',
+        name: 'CodeMirrorDemo',
+        component: () => import('../pages/CodeMirrorDemoPage.vue'),
+      },
     ],
   },
   {

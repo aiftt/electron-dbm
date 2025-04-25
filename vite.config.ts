@@ -20,6 +20,9 @@ export default defineConfig({
             outDir: 'dist-electron/main',
             rollupOptions: {
               external: ['electron', 'electron-updater'],
+              output: {
+                format: 'cjs'
+              }
             },
           },
         },
@@ -32,6 +35,9 @@ export default defineConfig({
             outDir: 'dist-electron/preload',
             rollupOptions: {
               external: ['electron'],
+              output: {
+                format: 'cjs'
+              }
             },
             minify: false,
             commonjsOptions: {
